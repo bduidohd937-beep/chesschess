@@ -892,7 +892,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             <h2>CHOOSE YOUR POWER</h2>
             <p>One choice changes the rules of this battle.</p>
             <div className="augment-choice-grid">
-              {augmentSelection.options.map((id) => {
+              {augmentSelection.options.map((id, index) => {
                 const augment = getAugmentDefinition(id);
                 if (!augment) return null;
                 return (
