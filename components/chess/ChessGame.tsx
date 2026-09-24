@@ -701,7 +701,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           hasAugment(augmentState, "S004") &&
           !pawnMoveAlreadyMade &&
           forward3 >= 1 && forward3 <= 8 &&
-          !game.get(one) && !game.get(two) && !game.get(three)
+          !game.get(one) && !game.get(two) && !game.get(three) &&
+          makeCustomMove(game, selected, three)
         ) {
           extraTargets.push(three);
         }
@@ -937,6 +938,16 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             square[0] === selected[0] &&
             Number(square[1]) - Number(selected[1]) === (movingPiece.color === "w" ? 1 : -1)
           );
+          const isS004Move = Boolean(
+            moveObject &&
+            moveObject.flags === "a" &&
+            augmentMode &&
+            augmentState &&
+            hasAugment(augmentState, "S004") &&
+            movingPiece?.type === "p" &&
+            Math.abs(Number(square[1]) - Number(selected[1])) === 3 &&
+            !game.history({ verbose: true }).some((move) => move.piece === "p")
+          );
           const customGame = makeCustomMove(game, selected, square);
           if (!customGame) {
             setSelected(null);
@@ -947,13 +958,13 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
           setLastMove({ from: selected, to: square });
           setCaptureSquare(captured ? square : null);
-          if (onlineSocket && onlineRoomId && (isG002Move || isS001Move || isS002Move)) {
+          if (onlineSocket && onlineRoomId && (isG002Move || isS001Move || isS002Move || isS004Move)) {
             onlineSocket.emit("move", {
               roomId: onlineRoomId,
               from: selected,
               to: square,
               custom: true,
-              augment: isG002Move ? "G002" : isS001Move ? "S001" : "S002",
+              augment: isG002Move ? "G002" : isS001Move ? "S001" : isS002Move ? "S002" : "S004",
             });
           }
           setSelected(null);
