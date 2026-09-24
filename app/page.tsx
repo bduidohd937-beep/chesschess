@@ -6,6 +6,7 @@ import ChessGame from "@/components/chess/ChessGame";
 import ModeMenu from "@/components/menu/ModeMenu";
 import OnlineLobby from "@/components/online/OnlineLobby";
 import AugmentChessGame from "@/components/augment/AugmentChessGame";
+import type { AugmentTier } from "@/components/augment/types";
 
 type MenuMode = "root" | "offline" | "online";
 type GameType = "classic" | "augment";
@@ -16,11 +17,13 @@ export default function Home() {
   const [onlineSocket, setOnlineSocket] = useState<Socket | null>(null);
   const [onlineRoomId, setOnlineRoomId] = useState("");
   const [onlinePlayerColor, setOnlinePlayerColor] = useState<"w" | "b">("w");
+  const [startAugmentTiers, setStartAugmentTiers] = useState<AugmentTier[] | undefined>(undefined);
 
-  const startOnline = useCallback((socket: Socket, roomId: string, color: "w" | "b") => {
+  const startOnline = useCallback((socket: Socket, roomId: string, color: "w" | "b", tiers?: AugmentTier[]) => {
     setOnlineSocket(socket);
     setOnlineRoomId(roomId);
     setOnlinePlayerColor(color);
+    setStartAugmentTiers(tiers);
   }, []);
 
   const resetToRoot = () => {
@@ -28,6 +31,7 @@ export default function Home() {
     setOnlineSocket(null);
     setOnlineRoomId("");
     setOnlinePlayerColor("w");
+    setStartAugmentTiers(undefined);
     setGameType(null);
     setMenuMode("root");
   };
