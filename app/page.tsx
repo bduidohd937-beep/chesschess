@@ -61,6 +61,7 @@ export default function Home() {
         onlineSocket={onlineSocket}
         onlineRoomId={onlineRoomId}
         onlinePlayerColor={onlinePlayerColor}
+        startAugmentTiers={startAugmentTiers}
         onBackToMenu={() => { onlineSocket.disconnect(); setOnlineSocket(null); setGameType(null); setMenuMode("online"); }}
       />
     );
