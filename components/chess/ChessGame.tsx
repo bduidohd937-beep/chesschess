@@ -573,7 +573,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         const moveObject = legalMoveObjects.find((move) => move.to === square);
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
-        if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, fen: nextGame.fen() });
+        if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square });
         setLastMove({ from: selected, to: square });
         setCaptureSquare(captured ? square : null);
         setSelected(null);
@@ -599,7 +599,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       const moveObject = legalMoveObjects.find((move) => move.to === pendingPromotion.to);
       const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
       setGame(nextGame);
-      if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, fen: nextGame.fen() });
+      if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece });
       setLastMove({ from: pendingPromotion.from, to: pendingPromotion.to });
       setCaptureSquare(captured ? pendingPromotion.to : null);
       setPendingPromotion(null);
