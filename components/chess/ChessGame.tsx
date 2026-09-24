@@ -316,7 +316,7 @@ function squareRank(square: Square) {
   return Number(square[1]);
 }
 
-function makeCustomMove(game: Chess, from: Square, to: Square): Chess | null {
+function makeCustomMove(game: Chess, from: Square, to: Square, promotion?: PromotionPiece): Chess | null {
   const movingPiece = game.get(from);
   if (!movingPiece) return null;
   const target = game.get(to);
@@ -325,7 +325,7 @@ function makeCustomMove(game: Chess, from: Square, to: Square): Chess | null {
   const next = new Chess(game.fen());
   next.remove(from);
   if (target) next.remove(to);
-  if (!next.put(movingPiece, to)) return null;
+  if (!next.put({ type: promotion ?? movingPiece.type, color: movingPiece.color }, to)) return null;
 
   const fen = next.fen().split(" ");
   fen[1] = oppositeColor(movingPiece.color);
@@ -649,7 +649,6 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
 
         const pawnMoveAlreadyMade = game.history({ verbose: true }).some((move) => {
-          const movingPawn = game.get(move.to);
           return move.piece === "p";
         });
 
@@ -810,10 +809,21 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     if (!pendingPromotion) return;
     const nextGame = new Chess(game.fen());
     try {
-      nextGame.move({ from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece });
       const moveObject = legalMoveObjects.find((move) => move.to === pendingPromotion.to);
       const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-      setGame(nextGame);
+      const promotedGame = moveObject?.flags === "a"
+        ? makeCustomMove(game, pendingPromotion.from, pendingPromotion.to, piece)
+        : (() => {
+            const standardGame = new Chess(game.fen());
+            standardGame.move({ from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece });
+            return standardGame;
+          })();
+      if (!promotedGame) {
+        setPendingPromotion(null);
+        setSelected(null);
+        return;
+      }
+      setGame(promotedGame);
       if (captured) onPieceCaptured?.("w");
       if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece });
       setLastMove({ from: pendingPromotion.from, to: pendingPromotion.to });
