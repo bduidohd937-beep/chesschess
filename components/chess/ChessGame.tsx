@@ -277,7 +277,7 @@ function Piece({ type, color, square, selected, onClick }: {
 function Board({ game, selected, legalMoves, onSquare }: {
   game: Chess;
   selected: Square | null;
-  legalMoves: string[];
+  legalMoves: { to: Square; captured?: PieceSymbol; flags: string }[];
   onSquare: (square: Square) => void;
   lastMove: { from: Square; to: Square } | null;
   captureSquare?: Square | null;
