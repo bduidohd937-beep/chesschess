@@ -316,7 +316,38 @@ function squareRank(square: Square) {
   return Number(square[1]);
 }
 
-function makeCustomMove(game: Chess, from: Square, to: Square, promotion?: PromotionPiece): Chess | null {
+function makeSniperCapture(game: Chess, targetSquare: Square, attackerColor: Color): Chess | null {
+  const target = game.get(targetSquare);
+  if (!target || target.type !== "p" || target.color === attackerColor) return null;
+
+  const next = new Chess(game.fen());
+  next.remove(targetSquare);
+  const fen = next.fen().split(" ");
+  fen[1] = oppositeColor(attackerColor);
+  fen[3] = "-";
+  fen[4] = "0";
+  if (attackerColor === "b") fen[5] = String(Number(fen[5]) + 1);
+
+  try {
+    const result = new Chess(fen.join(" "));
+    let kingSquare: Square | null = null;
+    const board = result.board();
+    for (let row = 0; row < 8; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        const piece = board[row][col];
+        if (piece?.type === "k" && piece.color === attackerColor) {
+          kingSquare = `${files[col]}${8 - row}` as Square;
+        }
+      }
+    }
+    if (!kingSquare || result.isAttacked(kingSquare, oppositeColor(attackerColor))) return null;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+function makeCustomMove(game: Chess, from: Square, to: Square, promotion?: PromotionPiece) {
   const movingPiece = game.get(from);
   if (!movingPiece) return null;
   const target = game.get(to);
@@ -457,7 +488,13 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
                 <meshBasicMaterial color="#48d597" />
               </mesh>
             )}
-            {isCapture && (
+            {isLegal && legalMove?.flags === "g" && (
+              <mesh raycast={() => null} position={[0, 0.14, 0]}>
+                <torusGeometry args={[0.31, 0.055, 12, 32]} />
+                <meshBasicMaterial color="#ffd45a" />
+              </mesh>
+            )}
+            {isCapture && legalMove?.flags !== "g" && (
               <mesh raycast={() => null} position={[0, 0.13, 0]}>
                 <torusGeometry args={[0.29, 0.045, 12, 32]} />
                 <meshBasicMaterial color="#e85b5b" />
@@ -501,6 +538,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
   const [captureSquare, setCaptureSquare] = useState<Square | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
+  const [g001Uses, setG001Uses] = useState(2);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
   const [aiThinking, setAiThinking] = useState(false);
@@ -683,6 +721,25 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
+      const sniperTargets: Square[] = [];
+      if (piece.type === "b" && hasAugment(augmentState, "G001")) {
+        for (const [df, dr] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+          let fileIndex = fromFile + df;
+          let rank = fromRank + dr;
+          while (fileIndex >= 0 && fileIndex < 8 && rank >= 1 && rank <= 8) {
+            const target = game.get(`${files[fileIndex]}${rank}` as Square);
+            if (target) {
+              if (target.color !== piece.color && target.type === "p") {
+                sniperTargets.push(`${files[fileIndex]}${rank}` as Square);
+              }
+              break;
+            }
+            fileIndex += df;
+            rank += dr;
+          }
+        }
+      }
+
       return [
         ...baseMoves,
         ...extraTargets
@@ -696,13 +753,28 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             flags: "a",
             san: "",
           })),
+        ...sniperTargets
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to))
+          .map((to) => ({
+            color: piece.color,
+            from: selected,
+            to,
+            piece: piece.type,
+            captured: "p" as PieceSymbol,
+            flags: "g",
+            san: "",
+          })),
       ];
     } catch {
       return [];
     }
   }, [game, selected, augmentMode, augmentState]);
 
-  const legalMoves = legalMoveObjects.map((move) => ({
+  const effectiveLegalMoveObjects = legalMoveObjects.filter(
+    (move) => move.flags !== "g" || g001Uses > 0,
+  );
+
+  const legalMoves = effectiveLegalMoveObjects.map((move) => ({
     to: move.to,
     captured: move.captured,
     flags: move.flags,
@@ -763,7 +835,26 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setPendingPromotion({ from: selected, to: square });
           return;
         }
-        const moveObject = legalMoveObjects.find((move) => move.to === square);
+        const moveObject = effectiveLegalMoveObjects.find((move) => move.to === square);
+        const isSniperMove = Boolean(moveObject && moveObject.flags === "g");
+        if (isSniperMove) {
+          if (onlineSocket || g001Uses <= 0) {
+            setSelected(null);
+            return;
+          }
+          const customGame = makeSniperCapture(game, square, movingPiece?.color ?? game.turn());
+          if (!customGame) {
+            setSelected(null);
+            return;
+          }
+          setGame(customGame);
+          setG001Uses((uses) => Math.max(0, uses - 1));
+          onPieceCaptured?.(movingPiece?.color ?? game.turn());
+          setLastMove({ from: selected, to: selected });
+          setCaptureSquare(square);
+          setSelected(null);
+          return;
+        }
         const isCustomAugmentMove = Boolean(moveObject && moveObject.flags === "a");
         if (isCustomAugmentMove) {
           if (onlineSocket) {
@@ -810,7 +901,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     if (!pendingPromotion) return;
     const nextGame = new Chess(game.fen());
     try {
-      const moveObject = legalMoveObjects.find((move) => move.to === pendingPromotion.to);
+      const moveObject = effectiveLegalMoveObjects.find((move) => move.to === pendingPromotion.to);
       const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
       const promotedGame = moveObject?.flags === "a"
         ? makeCustomMove(game, pendingPromotion.from, pendingPromotion.to, piece)
@@ -849,6 +940,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setLastMove(null);
     setCaptureSquare(null);
     setPendingPromotion(null);
+    setG001Uses(2);
     setOnlineGameOver(false);
   }
 
@@ -978,6 +1070,12 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
               <div><span>MOVE</span><b>{moveNumber}</b></div>
               <div><span>STATUS</span><b>{aiThinking ? "AI THINKING" : status}</b></div>
             </div>
+            {augmentMode && hasAugment(augmentState, "G001") && (
+              <div className="g001-status">
+                <span>G001 · SNIPER</span>
+                <b>{g001Uses} / 2 USES</b>
+              </div>
+            )}
             <p>Click a piece, then click a highlighted square.</p>
           </div>
 
