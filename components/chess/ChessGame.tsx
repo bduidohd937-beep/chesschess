@@ -791,7 +791,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             san: "",
           })),
         ...g002KnightTargets
-          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to))
+          .filter((to) => {
+            if (baseMoves.some((move) => move.to === to) || extraTargets.includes(to)) return false;
+            const candidate = makeCustomMove(game, selected, to);
+            return Boolean(candidate);
+          })
           .map((to) => ({
             color: piece.color,
             from: selected,
@@ -1021,7 +1025,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setOnlineGameOver(false);
   }
 
-  const g002Active = Boolean(augmentMode && augmentState && hasAugment(augmentState, "G002") && game.board().flat().filter((item) => item?.type === "n" && item.color === (onlinePlayerColor ?? game.turn())).length === 1);
+  const g002Color = onlinePlayerColor ?? game.turn();
+  const g002Active = Boolean(augmentMode && augmentState && hasAugment(augmentState, "G002") && game.board().flat().filter((item) => item?.type === "n" && item.color === g002Color).length === 1);
   const augmentGlowSquares = useMemo(() => {
     const result = new Set<Square>();
     if (g002Active) {
@@ -1038,6 +1043,12 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const augmentOwned = augmentState?.ownedAugments
     .map((id) => getAugmentDefinition(id))
     .filter(Boolean) ?? [];
+  const g002ConditionActive = Boolean(
+    augmentMode &&
+    augmentState &&
+    hasAugment(augmentState, "G002") &&
+    game.board().flat().filter((item) => item?.type === "n" && item.color === (onlinePlayerColor ?? game.turn())).length === 1
+  );
   const augmentPhase = augmentSelection?.phase ?? null;
 
   return (
@@ -1216,10 +1227,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
                 <div className="augment-empty">NO AUGMENTS YET</div>
               ) : (
                 augmentOwned.map((augment) => augment && (
-                  <div key={augment.id} className={`augment-mini-card tier-${augment.tier}`}>
+                  <div key={augment.id} className={`augment-mini-card tier-${augment.tier} ${augment.id === "G002" && g002ConditionActive ? "augment-active" : ""}`}>
                     <div className="augment-mini-tier">{augment.tier.toUpperCase()}</div>
                     <div className="augment-mini-name">{augment.name}</div>
                     <div className="augment-mini-description">{augment.description}</div>
+                    {augment.id === "G002" && g002ConditionActive && <div className="augment-active-label">● CONDITION MET · ACTIVE</div>}
                   </div>
                 ))
               )}
