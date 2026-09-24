@@ -438,7 +438,7 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
   );
 }
 
-export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, onlinePlayerColor, onPieceCaptured, augmentMode, augmentState, augmentSelection, onChooseAugment, onRerollAugment }: { onBackToMenu?: () => void; onlineSocket?: Socket | null; onlineRoomId?: string; onlinePlayerColor?: "w" | "b"; onPieceCaptured?: (color: "w" | "b") => void; augmentMode?: boolean; augmentState?: AugmentGameState; augmentSelection?: AugmentSelection | null; onChooseAugment?: (id: AugmentId) => void; onRerollAugment?: () => void }) {
+export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, onlinePlayerColor, onPieceCaptured, augmentMode, augmentState, augmentSelection, onChooseAugment, onRerollAugment }: { onBackToMenu?: () => void; onlineSocket?: Socket | null; onlineRoomId?: string; onlinePlayerColor?: "w" | "b"; onPieceCaptured?: (color: "w" | "b") => void; augmentMode?: boolean; augmentState?: AugmentGameState; augmentSelection?: AugmentSelection | null; onChooseAugment?: (id: AugmentId) => void; onRerollAugment?: (optionIndex: number) => void }) {
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
@@ -854,6 +854,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             <div className="next-item">♟ Real 3D Chess Pieces</div>
           </div>
         </aside>
+      </section>
+
       {augmentMode && (
         <aside className="augment-hud">
           <section className="augment-hud-card augment-owned-panel">
