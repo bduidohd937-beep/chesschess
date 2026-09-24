@@ -53,7 +53,7 @@ export default function AugmentChessGame({
     setState((previous) => rerollCurrentSelection(previous));
   }
 
-  function onPieceCaptured(color: "w" | "b") {
+  function onPieceCaptured(_color: "w" | "b") {
     if (onlineSocket) return;
     setState((previous) => {
       if (previous.nextSelection === null) return previous;
