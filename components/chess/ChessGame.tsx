@@ -300,6 +300,62 @@ function Piece({ type, color, square, selected, onClick, animateFrom }: {
     </group>
   );
 }
+function hasAugment(state: AugmentGameState | undefined, id: AugmentId) {
+  return Boolean(state?.ownedAugments.includes(id));
+}
+
+function oppositeColor(color: Color): Color {
+  return color === "w" ? "b" : "w";
+}
+
+function squareFile(square: Square) {
+  return files.indexOf(square[0]);
+}
+
+function squareRank(square: Square) {
+  return Number(square[1]);
+}
+
+function makeCustomMove(game: Chess, from: Square, to: Square): Chess | null {
+  const movingPiece = game.get(from);
+  if (!movingPiece) return null;
+  const target = game.get(to);
+  if (target?.color === movingPiece.color) return null;
+
+  const next = new Chess(game.fen());
+  next.remove(from);
+  if (target) next.remove(to);
+  if (!next.put(movingPiece, to)) return null;
+
+  const fen = next.fen().split(" ");
+  fen[1] = oppositeColor(movingPiece.color);
+  fen[3] = "-";
+  fen[4] = "0";
+  if (movingPiece.color === "b") {
+    fen[5] = String(Number(fen[5]) + 1);
+  }
+
+  try {
+    const result = new Chess(fen.join(" "));
+    let kingSquare: Square | null = null;
+    const board = result.board();
+    for (let row = 0; row < 8; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        const piece = board[row][col];
+        if (piece?.type === "k" && piece.color === movingPiece.color) {
+          kingSquare = `${files[col]}${8 - row}` as Square;
+        }
+      }
+    }
+    if (!kingSquare || result.isAttacked(kingSquare, oppositeColor(movingPiece.color))) {
+      return null;
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }: {
   game: Chess;
   selected: Square | null;
@@ -566,11 +622,85 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
     try {
-      return game.moves({ square: selected, verbose: true });
+      const baseMoves = game.moves({ square: selected, verbose: true });
+      if (!augmentMode || !augmentState) return baseMoves;
+
+      const piece = game.get(selected);
+      if (!piece) return baseMoves;
+
+      const extraTargets: Square[] = [];
+      const fromFile = squareFile(selected);
+      const fromRank = squareRank(selected);
+      const direction = piece.color === "w" ? 1 : -1;
+
+      if (piece.type === "p") {
+        const forward2 = fromRank + direction * 2;
+        const forward3 = fromRank + direction * 3;
+        const one = `${files[fromFile]}${fromRank + direction}` as Square;
+        const two = `${files[fromFile]}${forward2}` as Square;
+        const three = `${files[fromFile]}${forward3}` as Square;
+
+        if (
+          hasAugment(augmentState, "S001") &&
+          forward2 >= 1 && forward2 <= 8 &&
+          !game.get(one) && !game.get(two)
+        ) {
+          extraTargets.push(two);
+        }
+
+        const pawnMoveAlreadyMade = game.history({ verbose: true }).some((move) => {
+          const movingPawn = game.get(move.to);
+          return move.piece === "p";
+        });
+
+        if (
+          hasAugment(augmentState, "S004") &&
+          !pawnMoveAlreadyMade &&
+          forward3 >= 1 && forward3 <= 8 &&
+          !game.get(one) && !game.get(two) && !game.get(three)
+        ) {
+          extraTargets.push(three);
+        }
+
+        if (
+          hasAugment(augmentState, "S003") &&
+          game.get(one)?.type === "p" &&
+          game.get(one)?.color === piece.color &&
+          forward2 >= 1 && forward2 <= 8 &&
+          !game.get(two)
+        ) {
+          extraTargets.push(two);
+        }
+      }
+
+      if (piece.type === "n" && hasAugment(augmentState, "S002")) {
+        const forward = fromRank + direction;
+        if (forward >= 1 && forward <= 8) {
+          const target = `${files[fromFile]}${forward}` as Square;
+          if (game.get(target)?.color !== piece.color) {
+            extraTargets.push(target);
+          }
+        }
+      }
+
+      return [
+        ...baseMoves,
+        ...extraTargets
+          .filter((to, index, list) => list.indexOf(to) === index && !baseMoves.some((move) => move.to === to))
+          .map((to) => ({
+            color: piece.color,
+            from: selected,
+            to,
+            piece: piece.type,
+            captured: game.get(to)?.type,
+            flags: "a",
+            san: "",
+          })),
+      ];
     } catch {
       return [];
     }
-  }, [game, selected]);
+  }, [game, selected, augmentMode, augmentState]);
 
   const legalMoves = legalMoveObjects.map((move) => ({
     to: move.to,
@@ -633,8 +763,28 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setPendingPromotion({ from: selected, to: square });
           return;
         }
-        nextGame.move({ from: selected, to: square });
         const moveObject = legalMoveObjects.find((move) => move.to === square);
+        const isCustomAugmentMove = Boolean(moveObject && moveObject.flags === "a");
+        if (isCustomAugmentMove) {
+          if (onlineSocket) {
+            setSelected(null);
+            return;
+          }
+          const customGame = makeCustomMove(game, selected, square);
+          if (!customGame) {
+            setSelected(null);
+            return;
+          }
+          const captured = Boolean(game.get(square));
+          setGame(customGame);
+          if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
+          setLastMove({ from: selected, to: square });
+          setCaptureSquare(captured ? square : null);
+          setSelected(null);
+          return;
+        }
+
+        nextGame.move({ from: selected, to: square });
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
         if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
