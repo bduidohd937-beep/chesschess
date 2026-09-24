@@ -5,7 +5,7 @@ type ModeMenuProps = {
   onSelectOnline: () => void;
 };
 
-export default function ModeMenu({ onSelectClassic }: ModeMenuProps) {
+export default function ModeMenu({ onSelectClassic, onSelectOnline }: ModeMenuProps) {
   return (
     <main className="mode-menu">
       <div className="mode-hero">
