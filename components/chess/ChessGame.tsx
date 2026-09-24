@@ -455,7 +455,8 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
           to: square,
           promotion: "q",
         });
-        const captured = Boolean(game.get(square as any));
+        const moveObject = legalMoveObjects.find((move) => move.to === square);
+        const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
         setLastMove({ from: selected, to: square });
         setCaptureSquare(captured ? square : null);
