@@ -429,6 +429,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
   const [aiThinking, setAiThinking] = useState(false);
+  const [engineReady, setEngineReady] = useState(false);
   const stockfishRef = useRef<Worker | null>(null);
   const engineReadyRef = useRef(false);
   const aiSearchIdRef = useRef(0);
@@ -440,6 +441,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
       const line = String(event.data ?? "");
       if (line === "uciok") {
         engineReadyRef.current = true;
+        setEngineReady(true);
         worker.postMessage("isready");
         return;
       }
@@ -474,11 +476,12 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
       worker.terminate();
       stockfishRef.current = null;
       engineReadyRef.current = false;
+      setEngineReady(false);
     };
   }, []);
 
   useEffect(() => {
-    if (!aiEnabled || game.turn() !== "b" || game.isGameOver() || pendingPromotion || !engineReadyRef.current) return;
+    if (!aiEnabled || game.turn() !== "b" || game.isGameOver() || pendingPromotion || !engineReady) return;
     const worker = stockfishRef.current;
     if (!worker) return;
     const level = AI_LEVELS[aiLevel];
@@ -492,7 +495,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
     return () => {
       if (searchId === aiSearchIdRef.current) worker.postMessage("stop");
     };
-  }, [aiEnabled, aiLevel, game, pendingPromotion]);
+  }, [aiEnabled, aiLevel, game, pendingPromotion, engineReady]);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
