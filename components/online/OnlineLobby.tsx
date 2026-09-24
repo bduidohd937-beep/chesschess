@@ -4,7 +4,8 @@ import { io, type Socket } from "socket.io-client";
 type Props={onBack:()=>void;onGameStart:(socket:Socket,roomId:string,color:"w"|"b")=>void};
 const URL=process.env.NEXT_PUBLIC_SOCKET_URL||"http://localhost:3001";
 export default function OnlineLobby({onBack,onGameStart}:Props){
- const [socket,setSocket]=useState<Socket|null>(null),[code,setCode]=useState(""),[created,setCreated]=useState(""),[status,setStatus]=useState("READY"),[busy,setBusy]=useState(false);\n const startedRef=useRef(false);
+ const [socket,setSocket]=useState<Socket|null>(null),[code,setCode]=useState(""),[created,setCreated]=useState(""),[status,setStatus]=useState("READY"),[busy,setBusy]=useState(false);
+ const startedRef=useRef(false);
  useEffect(()=>{const s=io(URL,{transports:["websocket"]});setSocket(s);s.on("connect_error",()=>setStatus("SERVER OFFLINE"));s.on("room-created",({roomId})=>{setCreated(roomId);setStatus("WAITING FOR OPPONENT");setBusy(false)});s.on("room-joined",({roomId,color})=>{startedRef.current=true;setBusy(false);onGameStart(s,roomId,color)});s.on("game-start",({roomId,color})=>{startedRef.current=true;onGameStart(s,roomId,color)});return()=>{if(!startedRef.current)s.disconnect()}},[onGameStart]);
  const create=()=>{if(!socket)return;setBusy(true);setStatus("CREATING ROOM");socket.emit("create-room")};
  const join=()=>{if(!socket||code.length!==5)return;setBusy(true);setStatus("JOINING ROOM");socket.emit("join-room",{roomId:code},(r:{ok:boolean;error?:string})=>{if(!r.ok){setBusy(false);setStatus(r.error||"JOIN FAILED")}})};
