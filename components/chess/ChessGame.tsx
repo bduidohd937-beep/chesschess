@@ -481,7 +481,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           nextGame.move({ from, to, promotion: promotion ?? "q" });
           setLastMove({ from, to });
           const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
-          setCaptureSquare(Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e"))) ? to : null);
+          const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
+          if (captured) onPieceCaptured?.("b");
+          setCaptureSquare(captured ? to : null);
           return nextGame;
         } catch {
           return current;
