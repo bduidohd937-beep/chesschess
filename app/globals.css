@@ -311,3 +311,15 @@ h1 {
 .promotion-option span { font-size:34px; line-height:1; }
 .promotion-option b { font-size:9px; letter-spacing:.08em; }
 @media (max-width:600px) { .promotion-options { grid-template-columns:repeat(2,1fr); } }
+
+.online-lobby{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 30%,rgba(160,120,58,.16),transparent 38%),#090909}
+.online-card{width:min(560px,100%);padding:38px;border:1px solid #302b25;border-radius:16px;background:linear-gradient(145deg,#151310,#0d0d0c);box-shadow:0 24px 80px rgba(0,0,0,.45)}
+.online-card h1{margin:8px 0;font-family:Georgia,serif;font-size:48px;font-weight:500}
+.online-subtitle{color:#958d82;margin:0 0 28px}
+.online-primary,.online-secondary{border:1px solid #806338;background:#1b150e;color:#f0dfc1;border-radius:8px;padding:13px 16px;font-size:11px;font-weight:800;letter-spacing:.1em;cursor:pointer}
+.online-primary{width:100%}.online-primary:disabled,.online-secondary:disabled{opacity:.45;cursor:not-allowed}
+.room-code-box{margin-top:14px;padding:18px;border:1px solid #4c3a24;border-radius:10px;text-align:center;background:#110e0a}
+.room-code-box span,.room-code-box small{display:block;color:#8f806c;font-size:10px;letter-spacing:.12em}.room-code-box strong{display:block;margin:7px 0;font:700 34px/1 Arial;letter-spacing:.22em;color:#ead7ad}
+.online-divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:#665c50;font-size:10px}.online-divider:before,.online-divider:after{content:"";height:1px;background:#2b261f;flex:1}
+.join-row{display:grid;grid-template-columns:1fr auto;gap:8px}.join-row input{min-width:0;border:1px solid #393127;border-radius:8px;background:#0b0a09;color:#eee3cf;padding:13px 14px;font-size:18px;letter-spacing:.16em;text-align:center;outline:none}.join-row input:focus{border-color:#806338}
+.online-status{text-align:center;margin-top:18px;color:#a99778;font-size:10px;letter-spacing:.12em;font-weight:800}.online-back{display:block;margin:22px auto 0;border:0;background:none;color:#777067;cursor:pointer;font-size:11px}
