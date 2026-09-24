@@ -46,14 +46,30 @@ function Piece({ type, color, square, selected, onClick, animateFrom }: {
 
   const animationStart = animateFrom ? squarePosition(animateFrom) : null;
   const animationElapsed = useRef(animateFrom ? 0 : 1);
+  useEffect(() => {
+    animationElapsed.current = animateFrom ? 0 : 1;
+    if (groupRef.current && !animateFrom) {
+      groupRef.current.position.set(x, selected ? 0.18 : 0.1, z);
+    }
+  }, [animateFrom, x, z, selected]);
+
   useFrame((_, delta) => {
-    if (!groupRef.current || !animationStart || animationElapsed.current >= 1) return;
+    if (!groupRef.current) return;
+
+    if (!animationStart || animationElapsed.current >= 1) {
+      groupRef.current.position.set(x, selected ? 0.18 : 0.1, z);
+      return;
+    }
+
     animationElapsed.current = Math.min(1, animationElapsed.current + delta / 0.22);
     const t = animationElapsed.current;
     const eased = 1 - Math.pow(1 - t, 3);
+
     groupRef.current.position.x = THREE.MathUtils.lerp(animationStart[0], x, eased);
     groupRef.current.position.z = THREE.MathUtils.lerp(animationStart[2], z, eased);
-    groupRef.current.position.y = (selected ? 0.18 : 0.1) + Math.sin(Math.PI * eased) * 0.22;
+    groupRef.current.position.y =
+      THREE.MathUtils.lerp(0.1, selected ? 0.18 : 0.1, eased) +
+      Math.sin(Math.PI * eased) * 0.22;
   });
 
   const main = selected ? "#d9b84c" : white ? "#eee9dc" : "#171412";
