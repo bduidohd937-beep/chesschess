@@ -222,7 +222,11 @@ function Board({ game, selected, legalMoves, onSquare }: {
         const isSelected = square === selected;
         const legalMove = legalMoves.find((move) => move.to === square);
         const isLegal = Boolean(legalMove);
-        const isCapture = Boolean(legalMove?.captured);
+        // 캡처 표시는 chess.js의 실제 이동 플래그만 사용한다.
+        // captured 값만 믿으면 빈 대각선 칸이 캡처처럼 표시되는 상황을 방지할 수 없다.
+        const isCapture = Boolean(
+          legalMove && (legalMove.flags.includes("c") || legalMove.flags.includes("e"))
+        );
         return (
           <group key={square} position={[col - 3.5, 0, 3.5-row]}>
             <mesh receiveShadow onClick={(e) => { e.stopPropagation(); onSquare(square); }}>
@@ -268,6 +272,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   const legalMoves = legalMoveObjects.map((move) => ({
     to: move.to,
     captured: move.captured,
+    flags: move.flags,
   }));
 
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
