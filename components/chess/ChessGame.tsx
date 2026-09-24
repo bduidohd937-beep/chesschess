@@ -899,10 +899,13 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
         const isCustomAugmentMove = Boolean(moveObject && moveObject.flags === "a");
         if (isCustomAugmentMove) {
-          if (onlineSocket) {
-            setSelected(null);
-            return;
-          }
+          const isG002Move = Boolean(
+            augmentMode &&
+            augmentState &&
+            hasAugment(augmentState, "G002") &&
+            movingPiece?.type === "n" &&
+            game.board().flat().filter((item) => item?.type === "n" && item.color === movingPiece.color).length === 1
+          );
           const customGame = makeCustomMove(game, selected, square);
           if (!customGame) {
             setSelected(null);
@@ -913,6 +916,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
           setLastMove({ from: selected, to: square });
           setCaptureSquare(captured ? square : null);
+          if (onlineSocket && onlineRoomId && isG002Move) {
+            onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square, custom: true, augment: "G002" });
+          }
           setSelected(null);
           return;
         }
