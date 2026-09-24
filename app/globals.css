@@ -411,3 +411,26 @@ h1 {
   .game-result-actions { flex-direction: column; }
   .game-result-primary, .game-result-secondary { width: 100%; }
 }
+
+
+.battle-card { padding-bottom: 16px; }
+.battle-topline { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.check-badge { opacity:0; border:1px solid #3b3024; border-radius:999px; padding:5px 8px; color:#6f665b; font-size:9px; font-weight:800; letter-spacing:.12em; transition:all .18s ease; }
+.check-badge.visible { opacity:1; border-color:#8f3f3f; background:#281313; color:#ff8a8a; }
+.player-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:10px; padding:11px 10px; border:1px solid #28221b; border-radius:9px; background:#100f0d; }
+.player-side { display:flex; align-items:center; gap:10px; min-width:0; opacity:.58; transition:opacity .18s ease, border-color .18s ease; }
+.player-side.active { opacity:1; }
+.player-piece { width:34px; height:34px; display:grid; place-items:center; border-radius:8px; font-size:24px; line-height:1; flex:none; }
+.white-piece { background:#e9e0cf; color:#211c17; }
+.black-piece { background:#29231e; color:#eee5d7; border:1px solid #54473a; }
+.player-color { color:#8f877b; font-size:9px; letter-spacing:.16em; font-weight:800; }
+.player-name { margin-top:3px; color:#e5dbcb; font-size:12px; font-weight:800; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+.turn-badge { border:1px solid #a98232; background:#20170b; color:#e6c77e; border-radius:999px; padding:5px 8px; font-size:8px; font-weight:800; letter-spacing:.12em; }
+.battle-meta { display:grid; grid-template-columns:90px 1fr; gap:8px; margin-top:10px; }
+.battle-meta > div { padding:9px 10px; border:1px solid #28221b; border-radius:8px; background:#0d0c0a; min-width:0; }
+.battle-meta span { display:block; color:#6f675d; font-size:8px; letter-spacing:.14em; font-weight:800; }
+.battle-meta b { display:block; margin-top:4px; color:#e5dbcb; font-size:11px; letter-spacing:.05em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media (max-width:600px) {
+  .player-name { max-width:120px; }
+  .battle-meta { grid-template-columns:78px 1fr; }
+}
