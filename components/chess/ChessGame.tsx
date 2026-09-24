@@ -568,6 +568,21 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   }));
 
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
+  const isGameOver = game.isGameOver() || onlineGameOver;
+  const resultTitle = onlineStatus === "OPPONENT LEFT"
+    ? "OPPONENT LEFT"
+    : game.isCheckmate()
+      ? `${game.turn() === "w" ? "BLACK" : "WHITE"} WINS`
+      : game.isStalemate()
+        ? "STALEMATE"
+        : "DRAW";
+  const resultSubtitle = onlineStatus === "OPPONENT LEFT"
+    ? "The opponent disconnected from the match."
+    : game.isCheckmate()
+      ? "CHECKMATE"
+      : game.isStalemate()
+        ? "No legal moves remain."
+        : "The game ended without a winner.";
   const status = game.isCheckmate()
     ? `${turn === "WHITE" ? "BLACK" : "WHITE"} CHECKMATES`
     : game.isStalemate()
@@ -745,6 +760,20 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           </div>
         </aside>
       </section>
+      {isGameOver && !pendingPromotion && (
+        <div className="game-result-overlay">
+          <div className="game-result-card">
+            <div className="game-result-kicker">{onlineSocket ? "ONLINE MATCH" : "GAME OVER"}</div>
+            <div className="game-result-title">{resultTitle}</div>
+            <div className="game-result-subtitle">{resultSubtitle}</div>
+            <div className="game-result-actions">
+              <button className="game-result-primary" onClick={reset}>NEW GAME</button>
+              <button className="game-result-secondary" onClick={onBackToMenu}>MENU</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pendingPromotion && (
         <div className="promotion-overlay">
           <div className="promotion-card">
