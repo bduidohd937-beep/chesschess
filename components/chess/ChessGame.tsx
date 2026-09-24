@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Color, type PieceSymbol, type Square } from "chess.js";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Environment } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { Socket } from "socket.io-client";
 import type { AugmentGameState, AugmentId, AugmentSelection } from "@/components/augment/types";
@@ -738,7 +738,6 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
               shadow-mapSize-height={2048}
               shadow-bias={-0.00015}
             />
-            <Environment preset="studio" />
             <Board
               game={game}
               selected={selected}
