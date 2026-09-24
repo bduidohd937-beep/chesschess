@@ -761,6 +761,21 @@ h1 {
 
 
 
+/* AUGMENT CHESS — keep the battlefield clear of the persistent HUD */
+.augment-chess-app .chess-layout {
+  max-width: none;
+  margin: 0;
+  padding: 84px 28px 28px 330px;
+  display: block;
+}
+
+.augment-chess-app .board-shell {
+  width: min(calc(100vw - 358px), 1120px);
+  height: calc(100vh - 112px);
+  min-height: 0;
+  margin: 0 auto;
+}
+
 /* AUGMENT CHESS — dedicated TFT-style HUD */
 .augment-chess-app {
   position: relative;
@@ -1127,6 +1142,18 @@ h1 {
 }
 
 .augment-reroll-row button:disabled { opacity: .35; cursor: not-allowed; }
+
+@media (max-width: 760px) {
+  .augment-chess-app .chess-layout {
+    padding: 76px 10px 205px;
+  }
+
+  .augment-chess-app .board-shell {
+    width: 100%;
+    height: calc(100vh - 290px);
+    min-height: 360px;
+  }
+}
 
 @media (max-width: 1000px) {
   .augment-hud {
