@@ -164,3 +164,136 @@ h1 {
   .board-shell { height: 62vh; min-height: 400px; }
   .side-panel { display: flex; }
 }
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mode-menu {
+  min-height: 100vh;
+  padding: 48px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(160, 120, 58, .18), transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(255,255,255,.035), transparent 42%),
+    #090909;
+}
+
+.mode-hero {
+  text-align: center;
+  margin-bottom: 42px;
+}
+
+.mode-hero .eyebrow {
+  margin-bottom: 10px;
+}
+
+.mode-hero h1 {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: clamp(64px, 10vw, 120px);
+  line-height: .9;
+  letter-spacing: .08em;
+  font-weight: 500;
+}
+
+.mode-hero p {
+  margin: 18px 0 0;
+  color: #958d82;
+  letter-spacing: .08em;
+  font-size: 13px;
+}
+
+.mode-grid {
+  width: min(900px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.mode-card {
+  min-height: 320px;
+  padding: 34px;
+  border: 1px solid #302b25;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #151310, #0d0d0c);
+  color: #f2eadc;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.mode-card:hover {
+  transform: translateY(-5px);
+  border-color: #8c6d3c;
+  background: linear-gradient(145deg, #1a1712, #0e0d0c);
+}
+
+.mode-card.augment {
+  border-color: #4a344f;
+  background: linear-gradient(145deg, #171118, #0d0b0e);
+}
+
+.mode-card.augment:hover {
+  border-color: #8a5b99;
+}
+
+.mode-icon {
+  font-size: 44px;
+  line-height: 1;
+  margin-bottom: auto;
+  color: #d0b06c;
+}
+
+.mode-card.augment .mode-icon {
+  color: #b779d0;
+}
+
+.mode-title {
+  font-size: 19px;
+  letter-spacing: .1em;
+  font-weight: 800;
+}
+
+.mode-description {
+  margin-top: 9px;
+  color: #8f887e;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.mode-action {
+  margin-top: 24px;
+  font-size: 10px;
+  letter-spacing: .16em;
+  font-weight: 800;
+  color: #b99a62;
+}
+
+.mode-card.augment .mode-action {
+  color: #9b73aa;
+}
+
+.mode-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  color: #55504a;
+  font-size: 9px;
+  letter-spacing: .2em;
+  font-weight: 800;
+}
+
+@media (max-width: 700px) {
+  .mode-menu { padding: 28px 16px; }
+  .mode-grid { grid-template-columns: 1fr; }
+  .mode-card { min-height: 250px; }
+  .mode-hero { margin-bottom: 28px; }
+}
