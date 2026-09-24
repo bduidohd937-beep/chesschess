@@ -223,14 +223,14 @@ function Board({ game, selected, legalMoves, onSquare }: {
   );
 }
 
-export default function ChessGame() {
+export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void }) {
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
     try {
-      return game.moves({ square: selected, verbose: true });
+      return game.moves({ square: selected, verbose: true, legal: false });
     } catch {
       return [];
     }
@@ -295,7 +295,7 @@ export default function ChessGame() {
           <span className={game.turn() === "w" ? "turn-dot white" : "turn-dot black"} />
           {status}
         </div>
-        <button className="reset-button" onClick={reset}>NEW GAME</button>
+        <div className="header-actions"><button className="reset-button" onClick={onBackToMenu}>MENU</button><button className="reset-button" onClick={reset}>NEW GAME</button></div>
       </header>
 
       <section className="chess-layout">
