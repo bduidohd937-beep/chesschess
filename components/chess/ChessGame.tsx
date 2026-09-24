@@ -445,7 +445,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
-  const [aiThinking, setAiThinking] = useState(false);
+  const [aiThinking, setAiThinking] = useState(false);\n  const [onlineStatus, setOnlineStatus] = useState("CONNECTED");
   const [engineReady, setEngineReady] = useState(false);
   const stockfishRef = useRef<Worker | null>(null);
   const engineReadyRef = useRef(false);
@@ -674,7 +674,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         <aside className="side-panel">
           <div className="panel-card">
             <div className="panel-label">{onlineSocket ? "ONLINE MATCH" : "OPPONENT"}</div>
-            {onlineSocket ? <div className="game-status">YOU ARE {onlinePlayerColor === "w" ? "WHITE" : "BLACK"}</div> : <div className="ai-toggle-row">
+            {onlineSocket ? <div className="game-status">YOU ARE {onlinePlayerColor === "w" ? "WHITE" : "BLACK"} · {onlineStatus}</div> : <div className="ai-toggle-row">
               <button className={`ai-choice ${aiEnabled ? "active" : ""}`} onClick={() => { setAiEnabled(true); setAiThinking(false); }}>VS AI</button>
               <button className={`ai-choice ${!aiEnabled ? "active" : ""}`} onClick={() => { stockfishRef.current?.postMessage("stop"); setAiEnabled(false); setAiThinking(false); }}>2 PLAYER</button>
             </div>
