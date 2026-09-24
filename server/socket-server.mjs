@@ -60,7 +60,7 @@ function clearRay(game,from,to){
 io.on("connection",socket=>{
   socket.on("create-room",()=>{
     const roomId=makeRoomId();
-    rooms.set(roomId,{white:socket.id,black:null,game:new Chess(),startAugmentTiers:createStartAugmentTiers()});
+    rooms.set(roomId,{white:socket.id,black:null,game:new Chess(),startAugmentTiers:createStartAugmentTiers(),s004Used:{w:false,b:false}});
     socket.join(roomId);socket.data.roomId=roomId;socket.data.color="w";
     socket.emit("room-created",{roomId});
   });
@@ -80,6 +80,7 @@ io.on("connection",socket=>{
     if(!room||socket.data.roomId!==roomId)return reply?.({ok:false,error:"INVALID ROOM"});
     if(!room.white||!room.black)return reply?.({ok:false,error:"WAITING FOR OPPONENT"});
     room.game=new Chess();
+    room.s004Used={w:false,b:false};
     io.to(roomId).emit("game-reset",{fen:room.game.fen()});
     reply?.({ok:true});
   });
@@ -134,9 +135,18 @@ io.on("connection",socket=>{
         const direction=moving.color==="w"?1:-1;
         if(to[0]!==from[0]||Number(to[1])-Number(from[1])!==direction)throw new Error("INVALID S002 MOVE");
         room.game=customPosition(before,from,to);
-      }else if(custom===true&&augment==="S004"){
+      }else if(custom===true&&augment==="S003"){
+        if(!moving||moving.type!=="p"||moving.color!==socket.data.color)throw new Error("INVALID S003 MOVE");
+        const direction=moving.color==="w"?1:-1;
+        const fromRank=Number(from[1]);
+        const toRank=Number(to[1]);
+        const middle=from[0]+(fromRank+direction);
+        if(from[0]!==to[0]||toRank-fromRank!==direction*2)throw new Error("INVALID S003 MOVE");
+        if(!before.get(middle)||before.get(middle)?.type!=="p"||before.get(middle)?.color!==moving.color||target)throw new Error("INVALID S003 MOVE");
+        room.game=customPosition(before,from,to);
+            }else if(custom===true&&augment==="S004"){
         if(!moving||moving.type!=="p"||moving.color!==socket.data.color)throw new Error("INVALID S004 MOVE");
-        if(before.history({verbose:true}).some((m)=>m.piece==="p"))throw new Error("INVALID S004 MOVE");
+        if(room.s004Used?.[socket.data.color])throw new Error("INVALID S004 MOVE");
         const direction=moving.color==="w"?1:-1;
         const fromRank=Number(from[1]);
         const toRank=Number(to[1]);
@@ -146,6 +156,7 @@ io.on("connection",socket=>{
         const fen=room.game.fen().split(" ");
         fen[3]=from[0]+(fromRank+direction*2);
         room.game=new Chess(fen.join(" "));
+        room.s004Used[socket.data.color]=true;
       }else{
         const legal=before.moves({square:from,verbose:true}).find(m=>m.to===to);
         if(!legal)throw new Error("ILLEGAL MOVE");
