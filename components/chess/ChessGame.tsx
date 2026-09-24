@@ -440,25 +440,25 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
               />
             </mesh>
             {isCheckedKing && (
-              <mesh position={[0, 0.125, 0]}>
+              <mesh raycast={() => null} position={[0, 0.125, 0]}>
                 <torusGeometry args={[0.34, 0.055, 12, 40]} />
                 <meshBasicMaterial color="#ff5d5d" transparent opacity={0.82} />
               </mesh>
             )}
             {isSelected && (
-              <mesh position={[0, 0.13, 0]}>
+              <mesh raycast={() => null} position={[0, 0.13, 0]}>
                 <torusGeometry args={[0.4, 0.035, 12, 40]} />
                 <meshBasicMaterial color="#ffe08a" transparent opacity={0.9} />
               </mesh>
             )}
             {isLegal && !isCapture && (
-              <mesh position={[0, 0.12, 0]}>
+              <mesh raycast={() => null} position={[0, 0.12, 0]}>
                 <cylinderGeometry args={[0.13, 0.13, 0.04, 24]} />
                 <meshBasicMaterial color="#48d597" />
               </mesh>
             )}
             {isCapture && (
-              <mesh position={[0, 0.13, 0]}>
+              <mesh raycast={() => null} position={[0, 0.13, 0]}>
                 <torusGeometry args={[0.29, 0.045, 12, 32]} />
                 <meshBasicMaterial color="#e85b5b" />
               </mesh>
@@ -469,6 +469,7 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
 
       {captureSquare && (
         <mesh
+          raycast={() => null}
           position={[
             squarePosition(captureSquare)[0],
             0.16,
