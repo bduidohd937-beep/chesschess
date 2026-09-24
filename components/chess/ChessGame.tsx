@@ -35,112 +35,141 @@ function Piece({ type, color, square, selected, onClick }: {
   const white = color === "w";
   const main = selected ? "#d7b65d" : white ? "#f4efe2" : "#211d1a";
   const edge = selected ? "#f0d477" : white ? "#d9d0bf" : "#0e0c0b";
+  const material = { color: main, metalness: 0.1, roughness: 0.22 } as const;
+  const accent = { color: edge, metalness: 0.16, roughness: 0.2 } as const;
 
   return (
-    <group position={[x, 0.1, z]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      <mesh castShadow position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.34, 0.4, 0.16, 40]} />
-        <meshStandardMaterial color={edge} metalness={0.18} roughness={0.24} />
+    <group position={[x, selected ? 0.18 : 0.1, z]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
+      <mesh castShadow position={[0, 0.08, 0]}>
+        <cylinderGeometry args={[0.36, 0.43, 0.16, 40]} />
+        <meshStandardMaterial {...accent} />
       </mesh>
 
       {type === "p" && <>
         <mesh castShadow position={[0, 0.42, 0]}>
           <latheGeometry args={[[
-            new THREE.Vector2(0.17, 0),
-            new THREE.Vector2(0.23, 0.12),
-            new THREE.Vector2(0.19, 0.25),
-            new THREE.Vector2(0.15, 0.48),
-            new THREE.Vector2(0.22, 0.54),
+            new THREE.Vector2(0.18, 0),
+            new THREE.Vector2(0.25, 0.12),
+            new THREE.Vector2(0.2, 0.28),
+            new THREE.Vector2(0.14, 0.52),
+            new THREE.Vector2(0.22, 0.58),
           ], 32]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+          <meshStandardMaterial {...material} />
         </mesh>
-        <mesh castShadow position={[0, 0.88, 0]}>
-          <sphereGeometry args={[0.2, 32, 20]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        <mesh castShadow position={[0, 0.86, 0]}>
+          <sphereGeometry args={[0.21, 32, 20]} />
+          <meshStandardMaterial {...material} />
         </mesh>
       </>}
 
       {type === "r" && <>
+        <mesh castShadow position={[0, 0.45, 0]}>
+          <cylinderGeometry args={[0.25, 0.31, 0.62, 32]} />
+          <meshStandardMaterial {...material} />
+        </mesh>
+        <mesh castShadow position={[0, 0.82, 0]}>
+          <cylinderGeometry args={[0.35, 0.29, 0.18, 12]} />
+          <meshStandardMaterial {...accent} />
+        </mesh>
+        {[-0.2, 0, 0.2].map((dx) => (
+          <mesh key={dx} castShadow position={[dx, 0.98, 0]}>
+            <boxGeometry args={[0.11, 0.2, 0.25]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+        ))}
+      </>}
+
+      {type === "n" && <>
         <mesh castShadow position={[0, 0.43, 0]}>
-          <cylinderGeometry args={[0.22, 0.29, 0.55, 32]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+          <cylinderGeometry args={[0.25, 0.34, 0.56, 20]} />
+          <meshStandardMaterial {...material} />
         </mesh>
-        <mesh castShadow position={[0, 0.8, 0]}>
-          <cylinderGeometry args={[0.31, 0.27, 0.16, 12]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        <mesh castShadow position={[0, 0.82, 0]} rotation={[0, 0, -0.18]}>
+          <coneGeometry args={[0.28, 0.48, 6]} />
+          <meshStandardMaterial {...material} />
         </mesh>
-        {[-0.18, 0, 0.18].map((x) => <mesh key={x} castShadow position={[x, 0.95, 0]}>
-          <boxGeometry args={[0.1, 0.18, 0.24]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
-        </mesh>)}
+        <mesh castShadow position={[0, 0.91, 0.02]}>
+          <torusGeometry args={[0.16, 0.035, 10, 20, Math.PI * 1.35]} />
+          <meshStandardMaterial {...accent} />
+        </mesh>
+        <mesh castShadow position={[0.02, 0.98, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
+          <boxGeometry args={[0.08, 0.08, 0.48]} />
+          <meshStandardMaterial {...accent} />
+        </mesh>
       </>}
 
       {type === "b" && <>
         <mesh castShadow position={[0, 0.48, 0]}>
-          <coneGeometry args={[0.29, 0.72, 32]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+          <coneGeometry args={[0.31, 0.76, 24]} />
+          <meshStandardMaterial {...material} />
         </mesh>
-        <mesh castShadow position={[0, 0.9, 0]}>
-          <sphereGeometry args={[0.17, 28, 18]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        <mesh castShadow position={[0, 0.91, 0]}>
+          <sphereGeometry args={[0.18, 28, 18]} />
+          <meshStandardMaterial {...accent} />
         </mesh>
-        <mesh position={[0, 0.89, 0.13]} rotation={[0.35, 0, 0]}>
-          <boxGeometry args={[0.045, 0.28, 0.06]} />
-          <meshStandardMaterial color={edge} />
+        <mesh castShadow position={[0, 0.93, 0]} rotation={[0.2, 0, 0.2]}>
+          <boxGeometry args={[0.07, 0.34, 0.08]} />
+          <meshStandardMaterial {...material} />
         </mesh>
-      </>}
-
-      {type === "n" && <>
-        <mesh castShadow position={[0, 0.53, 0]} rotation={[0, 0, -0.12]}>
-          <capsuleGeometry args={[0.23, 0.55, 8, 20]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
-        </mesh>
-        <mesh castShadow position={[0.08, 0.9, 0.02]} rotation={[0, 0, -0.18]}>
-          <coneGeometry args={[0.19, 0.42, 4]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        <mesh castShadow position={[0, 1.02, 0]}>
+          <torusGeometry args={[0.18, 0.025, 8, 24]} />
+          <meshStandardMaterial {...accent} />
         </mesh>
       </>}
 
       {type === "q" && <>
-        <mesh castShadow position={[0, 0.5, 0]}>
+        <mesh castShadow position={[0, 0.48, 0]}>
           <latheGeometry args={[[
             new THREE.Vector2(0.18, 0),
-            new THREE.Vector2(0.28, 0.18),
-            new THREE.Vector2(0.22, 0.55),
-            new THREE.Vector2(0.29, 0.68),
+            new THREE.Vector2(0.3, 0.18),
+            new THREE.Vector2(0.24, 0.5),
+            new THREE.Vector2(0.3, 0.7),
           ], 32]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+          <meshStandardMaterial {...material} />
         </mesh>
-        <mesh castShadow position={[0, 1.0, 0]}>
-          <sphereGeometry args={[0.24, 28, 18]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        <mesh castShadow position={[0, 0.91, 0]}>
+          <cylinderGeometry args={[0.23, 0.27, 0.16, 32]} />
+          <meshStandardMaterial {...accent} />
         </mesh>
-        {[0, Math.PI/2, Math.PI, Math.PI*1.5].map((a) => <mesh key={a} castShadow position={[Math.cos(a)*0.17, 0.91, Math.sin(a)*0.17]}>
-          <sphereGeometry args={[0.07, 16, 12]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
-        </mesh>)}
+        {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((a) => (
+          <mesh key={a} castShadow position={[Math.cos(a) * 0.18, 1.08, Math.sin(a) * 0.18]}>
+            <sphereGeometry args={[0.09, 16, 12]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+        ))}
+        <mesh castShadow position={[0, 1.08, 0]}>
+          <sphereGeometry args={[0.13, 20, 16]} />
+          <meshStandardMaterial {...material} />
+        </mesh>
       </>}
 
       {type === "k" && <>
         <mesh castShadow position={[0, 0.5, 0]}>
           <latheGeometry args={[[
-            new THREE.Vector2(0.19, 0),
-            new THREE.Vector2(0.3, 0.18),
-            new THREE.Vector2(0.24, 0.52),
-            new THREE.Vector2(0.3, 0.67),
+            new THREE.Vector2(0.2, 0),
+            new THREE.Vector2(0.32, 0.18),
+            new THREE.Vector2(0.25, 0.52),
+            new THREE.Vector2(0.31, 0.7),
           ], 32]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+          <meshStandardMaterial {...material} />
         </mesh>
-        <mesh castShadow position={[0, 0.96, 0]}>
-          <boxGeometry args={[0.14, 0.42, 0.14]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        <mesh castShadow position={[0, 0.82, 0]}>
+          <cylinderGeometry args={[0.26, 0.29, 0.2, 32]} />
+          <meshStandardMaterial {...accent} />
         </mesh>
-        <mesh castShadow position={[0, 0.96, 0]}>
-          <boxGeometry args={[0.42, 0.14, 0.14]} />
-          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        <mesh castShadow position={[0, 1.04, 0]}>
+          <boxGeometry args={[0.14, 0.46, 0.14]} />
+          <meshStandardMaterial {...material} />
+        </mesh>
+        <mesh castShadow position={[0, 1.04, 0]}>
+          <boxGeometry args={[0.46, 0.14, 0.14]} />
+          <meshStandardMaterial {...material} />
+        </mesh>
+        <mesh castShadow position={[0, 1.29, 0]}>
+          <sphereGeometry args={[0.07, 16, 12]} />
+          <meshStandardMaterial {...accent} />
         </mesh>
       </>}
-
     </group>
   );
 }
@@ -230,7 +259,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
     try {
-      return game.moves({ square: selected, verbose: true, legal: false });
+      return game.moves({ square: selected, verbose: true });
     } catch {
       return [];
     }
