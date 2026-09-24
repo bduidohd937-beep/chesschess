@@ -1,12 +1,20 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Color, type PieceSymbol } from "chess.js";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
 
 type Square = string;
+type PromotionPiece = "q" | "r" | "b" | "n";
+type AiLevel = "beginner" | "intermediate" | "advanced";
+
+const AI_LEVELS: Record<AiLevel, { label: string; skill: number; depth: number }> = {
+  beginner: { label: "BEGINNER", skill: 2, depth: 6 },
+  intermediate: { label: "INTERMEDIATE", skill: 10, depth: 10 },
+  advanced: { label: "ADVANCED", skill: 20, depth: 14 },
+};
 
 const files = ["a","b","c","d","e","f","g","h"];
 
@@ -417,6 +425,74 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   const [selected, setSelected] = useState<Square | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
   const [captureSquare, setCaptureSquare] = useState<Square | null>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
+  const [aiThinking, setAiThinking] = useState(false);
+  const stockfishRef = useRef<Worker | null>(null);
+  const engineReadyRef = useRef(false);
+  const aiSearchIdRef = useRef(0);
+
+  useEffect(() => {
+    const worker = new Worker("/stockfish.wasm.js");
+    stockfishRef.current = worker;
+    worker.onmessage = (event) => {
+      const line = String(event.data ?? "");
+      if (line === "uciok") {
+        engineReadyRef.current = true;
+        worker.postMessage("isready");
+        return;
+      }
+      if (!line.startsWith("bestmove")) return;
+      const match = line.match(/^bestmove ([a-h][1-8])([a-h][1-8])([qrbn])?/);
+      const searchId = aiSearchIdRef.current;
+      if (!match) {
+        setAiThinking(false);
+        return;
+      }
+      const from = match[1] as Square;
+      const to = match[2] as Square;
+      const promotion = (match[3] as PromotionPiece | undefined) ?? undefined;
+      setGame((current) => {
+        if (current.turn() !== "b") return current;
+        const nextGame = new Chess(current.fen());
+        try {
+          nextGame.move({ from, to, promotion: promotion ?? "q" });
+          setLastMove({ from, to });
+          const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
+          setCaptureSquare(Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e"))) ? to : null);
+          return nextGame;
+        } catch {
+          return current;
+        }
+      });
+      if (searchId === aiSearchIdRef.current) setAiThinking(false);
+    };
+    worker.postMessage("uci");
+    return () => {
+      aiSearchIdRef.current += 1;
+      worker.terminate();
+      stockfishRef.current = null;
+      engineReadyRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!aiEnabled || game.turn() !== "b" || game.isGameOver() || pendingPromotion || !engineReadyRef.current || aiThinking) return;
+    const worker = stockfishRef.current;
+    if (!worker) return;
+    const level = AI_LEVELS[aiLevel];
+    const searchId = ++aiSearchIdRef.current;
+    setAiThinking(true);
+    worker.postMessage("stop");
+    worker.postMessage("ucinewgame");
+    worker.postMessage(`setoption name Skill Level value ${level.skill}`);
+    worker.postMessage(`position fen ${game.fen()}`);
+    worker.postMessage(`go depth ${level.depth}`);
+    return () => {
+      if (searchId === aiSearchIdRef.current) worker.postMessage("stop");
+    };
+  }, [aiEnabled, aiLevel, game, pendingPromotion, aiThinking]);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
@@ -445,16 +521,19 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
           : `${turn} TO MOVE`;
 
   function handleSquare(square: Square) {
+    if (aiThinking || pendingPromotion) return;
     const piece = game.get(square as any);
 
     if (selected && legalMoves.some((move) => move.to === square)) {
       const nextGame = new Chess(game.fen());
       try {
-        nextGame.move({
-          from: selected,
-          to: square,
-          promotion: "q",
-        });
+        const movingPiece = game.get(selected as any);
+        const targetRank = square[1];
+        if (movingPiece?.type === "p" && (targetRank === "1" || targetRank === "8")) {
+          setPendingPromotion({ from: selected, to: square });
+          return;
+        }
+        nextGame.move({ from: selected, to: square });
         const moveObject = legalMoveObjects.find((move) => move.to === square);
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
@@ -475,11 +554,33 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
     }
   }
 
+  function promote(piece: PromotionPiece) {
+    if (!pendingPromotion) return;
+    const nextGame = new Chess(game.fen());
+    try {
+      nextGame.move({ from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece });
+      const moveObject = legalMoveObjects.find((move) => move.to === pendingPromotion.to);
+      const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
+      setGame(nextGame);
+      setLastMove({ from: pendingPromotion.from, to: pendingPromotion.to });
+      setCaptureSquare(captured ? pendingPromotion.to : null);
+      setPendingPromotion(null);
+      setSelected(null);
+    } catch {
+      setPendingPromotion(null);
+      setSelected(null);
+    }
+  }
+
   function reset() {
+    aiSearchIdRef.current += 1;
+    stockfishRef.current?.postMessage("stop");
+    setAiThinking(false);
     setGame(new Chess());
     setSelected(null);
     setLastMove(null);
     setCaptureSquare(null);
+    setPendingPromotion(null);
   }
 
   return (
@@ -491,7 +592,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
         </div>
         <div className="status">
           <span className={game.turn() === "w" ? "turn-dot white" : "turn-dot black"} />
-          {status}
+          {aiThinking ? "AI THINKING" : status}
         </div>
         <div className="header-actions"><button className="reset-button" onClick={onBackToMenu}>MENU</button><button className="reset-button" onClick={reset}>NEW GAME</button></div>
       </header>
@@ -534,8 +635,25 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
 
         <aside className="side-panel">
           <div className="panel-card">
+            <div className="panel-label">OPPONENT</div>
+            <div className="ai-toggle-row">
+              <button className={`ai-choice ${aiEnabled ? "active" : ""}`} onClick={() => { setAiEnabled(true); setAiThinking(false); }}>VS AI</button>
+              <button className={`ai-choice ${!aiEnabled ? "active" : ""}`} onClick={() => { stockfishRef.current?.postMessage("stop"); setAiEnabled(false); setAiThinking(false); }}>2 PLAYER</button>
+            </div>
+            {aiEnabled && (
+              <div className="ai-levels">
+                {(Object.keys(AI_LEVELS) as AiLevel[]).map((level) => (
+                  <button key={level} className={`ai-level ${aiLevel === level ? "active" : ""}`} onClick={() => setAiLevel(level)}>
+                    {AI_LEVELS[level].label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="panel-card">
             <div className="panel-label">GAME</div>
-            <div className="game-status">{status}</div>
+            <div className="game-status">{aiThinking ? "AI THINKING" : status}</div>
             <p>Click a piece, then click a highlighted square.</p>
           </div>
 
@@ -548,12 +666,29 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
 
           <div className="panel-card">
             <div className="panel-label">COMING NEXT</div>
-            <div className="next-item">♟ Offline Stockfish AI</div>
+            <div className="next-item">✓ Offline Stockfish AI</div>
             <div className="next-item">♟ Online 1v1 Rooms</div>
             <div className="next-item">♟ Real 3D Chess Pieces</div>
           </div>
         </aside>
       </section>
+      {pendingPromotion && (
+        <div className="promotion-overlay">
+          <div className="promotion-card">
+            <div className="panel-label">PROMOTE PAWN</div>
+            <div className="promotion-title">Choose a piece</div>
+            <div className="promotion-options">
+              {([["q", "QUEEN", "♕"], ["r", "ROOK", "♖"], ["b", "BISHOP", "♗"], ["n", "KNIGHT", "♘"]] as const).map(([piece, label, symbol]) => (
+                <button key={piece} className="promotion-option" onClick={() => promote(piece)}>
+                  <span>{symbol}</span>
+                  <b>{label}</b>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
