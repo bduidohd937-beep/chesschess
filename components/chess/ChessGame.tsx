@@ -721,7 +721,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         const forward = fromRank + direction;
         if (forward >= 1 && forward <= 8) {
           const target = `${files[fromFile]}${forward}` as Square;
-          if (game.get(target)?.color !== piece.color) {
+          if (game.get(target)?.color !== piece.color && makeCustomMove(game, selected, target)) {
             extraTargets.push(target);
           }
         }
@@ -928,12 +928,14 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             Number(square[1]) - Number(selected[1]) === (movingPiece.color === "w" ? 2 : -2)
           );
           const isS002Move = Boolean(
+            moveObject &&
+            moveObject.flags === "a" &&
             augmentMode &&
             augmentState &&
             hasAugment(augmentState, "S002") &&
             movingPiece?.type === "n" &&
             square[0] === selected[0] &&
-            Math.abs(Number(square[1]) - Number(selected[1])) === 1
+            Number(square[1]) - Number(selected[1]) === (movingPiece.color === "w" ? 1 : -1)
           );
           const customGame = makeCustomMove(game, selected, square);
           if (!customGame) {
