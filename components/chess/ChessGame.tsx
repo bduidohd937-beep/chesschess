@@ -721,6 +721,37 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
+      if (piece.type === "p" && hasAugment(augmentState, "S003")) {
+        const forward = fromRank + direction;
+        const landingRank = fromRank + direction * 2;
+        const landing = `${files[fromFile]}${landingRank}` as Square;
+        if (forward >= 1 && forward <= 8 && landingRank >= 1 && landingRank <= 8 && game.get(one)?.type === "p" && game.get(one)?.color === piece.color && !game.get(landing)) {
+          extraTargets.push(landing);
+        }
+      }
+
+      const g002KnightTargets: Square[] = [];
+      if (piece.type === "n" && hasAugment(augmentState, "G002")) {
+        const knightCount = game.board().flat().filter((item) => item?.type === "n" && item.color === piece.color).length;
+        if (knightCount === 1) {
+          for (const [df, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+            let fileIndex = fromFile + df;
+            let rank = fromRank + dr;
+            while (fileIndex >= 0 && fileIndex < 8 && rank >= 1 && rank <= 8) {
+              const targetSquare = `${files[fileIndex]}${rank}` as Square;
+              const target = game.get(targetSquare);
+              if (target) {
+                if (target.color !== piece.color) g002KnightTargets.push(targetSquare);
+                break;
+              }
+              g002KnightTargets.push(targetSquare);
+              fileIndex += df;
+              rank += dr;
+            }
+          }
+        }
+      }
+
       const sniperTargets: Square[] = [];
       if (piece.type === "b" && hasAugment(augmentState, "G001")) {
         for (const [df, dr] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
@@ -753,8 +784,19 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             flags: "a",
             san: "",
           })),
-        ...sniperTargets
+        ...g002KnightTargets
           .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to))
+          .map((to) => ({
+            color: piece.color,
+            from: selected,
+            to,
+            piece: piece.type,
+            captured: game.get(to)?.type,
+            flags: "a",
+            san: "",
+          })),
+        ...sniperTargets
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to))
           .map((to) => ({
             color: piece.color,
             from: selected,
