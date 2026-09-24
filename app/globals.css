@@ -1150,3 +1150,34 @@ h1 {
   .augment-choice-card h3 { margin-top: 22px; }
   .augment-choice-card span { margin-top: 16px; }
 }
+
+
+.augment-choice-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.augment-card-reroll {
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.82);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  cursor: pointer;
+}
+
+.augment-card-reroll:hover:not(:disabled) {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.32);
+}
+
+.augment-card-reroll:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
