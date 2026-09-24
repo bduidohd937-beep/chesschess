@@ -444,7 +444,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
-  const [aiThinking, setAiThinking] = useState(false);\n  const [onlineStatus, setOnlineStatus] = useState("CONNECTED");
+  const [aiThinking, setAiThinking] = useState(false);
+  const [onlineStatus, setOnlineStatus] = useState("CONNECTED");
   const [engineReady, setEngineReady] = useState(false);
   const stockfishRef = useRef<Worker | null>(null);
   const engineReadyRef = useRef(false);
