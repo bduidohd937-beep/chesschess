@@ -434,3 +434,20 @@ h1 {
   .player-name { max-width:120px; }
   .battle-meta { grid-template-columns:78px 1fr; }
 }
+
+
+.move-history-card { min-height: 0; }
+.move-count { color:#6f675d; font-size:8px; font-weight:800; letter-spacing:.12em; }
+.move-history-list { margin-top:10px; max-height:180px; overflow-y:auto; padding-right:3px; }
+.move-history-list::-webkit-scrollbar { width:4px; }
+.move-history-list::-webkit-scrollbar-track { background:#0b0a09; border-radius:4px; }
+.move-history-list::-webkit-scrollbar-thumb { background:#403526; border-radius:4px; }
+.move-history-row { display:grid; grid-template-columns:34px 1fr 1fr; gap:6px; align-items:center; padding:5px 4px; border-bottom:1px solid #211d18; font-size:11px; }
+.move-history-row:last-child { border-bottom:0; }
+.move-number { color:#665e53; font-size:9px; font-weight:800; }
+.move-san { color:#b9afa0; padding:5px 7px; border-radius:5px; min-width:0; }
+.move-san.current { background:#21180d; color:#f0d99f; border:1px solid #6d522b; }
+.move-history-empty { padding:20px 8px; text-align:center; color:#5f584f; font-size:9px; letter-spacing:.16em; font-weight:800; }
+@media (max-width:900px) {
+  .move-history-list { max-height:150px; }
+}
