@@ -45,7 +45,7 @@ function Piece({ type, color, square, selected, onClick }: {
     const eased = 1 - Math.pow(1 - t, 3);
     groupRef.current.position.x = THREE.MathUtils.lerp(animationStart[0], x, eased);
     groupRef.current.position.z = THREE.MathUtils.lerp(animationStart[2], z, eased);
-    groupRef.current.position.y = 0.1 + Math.sin(Math.PI * eased) * 0.22;
+    groupRef.current.position.y = (selected ? 0.18 : 0.1) + Math.sin(Math.PI * eased) * 0.22;
   });
 
   const main = selected ? "#d9b84c" : white ? "#eee9dc" : "#171412";
@@ -280,6 +280,7 @@ function Board({ game, selected, legalMoves, onSquare }: {
   legalMoves: string[];
   onSquare: (square: Square) => void;
   lastMove: { from: Square; to: Square } | null;
+  captureSquare?: Square | null;
 }) {
   const pieces = useMemo(() => {
     const result: { square:string; type:PieceSymbol; color:Color }[] = [];
@@ -325,6 +326,10 @@ function Board({ game, selected, legalMoves, onSquare }: {
         const square = `${files[col]}${8-row}`;
         const light = (col + row) % 2 === 0;
         const isSelected = square === selected;
+        const isLastMove = lastMove?.from === square || lastMove?.to === square;
+        const boardPiece = game.get(square as any);
+        const isCheckedKing =
+          Boolean(boardPiece && boardPiece.type === "k" && boardPiece.color === game.turn() && game.isCheck());
         const legalMove = legalMoves.find((move) => move.to === square);
         const isLegal = Boolean(legalMove);
         // 캡처 표시는 chess.js의 실제 이동 플래그만 사용한다.
@@ -337,11 +342,33 @@ function Board({ game, selected, legalMoves, onSquare }: {
             <mesh receiveShadow onClick={(e) => { e.stopPropagation(); onSquare(square); }}>
               <boxGeometry args={[0.98, 0.18, 0.98]} />
               <meshStandardMaterial
-                color={isSelected ? "#c9a227" : light ? "#e8d0a8" : "#765033"}
+                color={
+                  isCheckedKing
+                    ? "#9d3535"
+                    : isSelected
+                      ? "#c9a227"
+                      : isLastMove
+                        ? "#9c7b3e"
+                        : light
+                          ? "#e8d0a8"
+                          : "#765033"
+                }
                 roughness={0.28}
                 metalness={0.08}
               />
             </mesh>
+            {isCheckedKing && (
+              <mesh position={[0, 0.125, 0]}>
+                <torusGeometry args={[0.34, 0.055, 12, 40]} />
+                <meshBasicMaterial color="#ff5d5d" transparent opacity={0.82} />
+              </mesh>
+            )}
+            {isSelected && (
+              <mesh position={[0, 0.13, 0]}>
+                <torusGeometry args={[0.4, 0.035, 12, 40]} />
+                <meshBasicMaterial color="#ffe08a" transparent opacity={0.9} />
+              </mesh>
+            )}
             {isLegal && !isCapture && (
               <mesh position={[0, 0.12, 0]}>
                 <cylinderGeometry args={[0.13, 0.13, 0.04, 24]} />
@@ -357,6 +384,20 @@ function Board({ game, selected, legalMoves, onSquare }: {
           </group>
         );
       })}
+
+      {captureSquare && (
+        <mesh
+          position={[
+            squarePosition(captureSquare)[0],
+            0.16,
+            squarePosition(captureSquare)[2],
+          ]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry args={[0.2, 0.42, 40]} />
+          <meshBasicMaterial color="#ffb24a" transparent opacity={0.8} />
+        </mesh>
+      )}
 
       {pieces.map((piece) => (
         <Piece
@@ -375,6 +416,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
+  const [captureSquare, setCaptureSquare] = useState<Square | null>(null);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
@@ -413,8 +455,10 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
           to: square,
           promotion: "q",
         });
+        const captured = Boolean(game.get(square as any));
         setGame(nextGame);
         setLastMove({ from: selected, to: square });
+        setCaptureSquare(captured ? square : null);
         setSelected(null);
         return;
       } catch {
@@ -434,6 +478,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
     setGame(new Chess());
     setSelected(null);
     setLastMove(null);
+    setCaptureSquare(null);
   }
 
   return (
@@ -470,6 +515,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
               selected={selected}
               legalMoves={legalMoves}
               lastMove={lastMove}
+              captureSquare={captureSquare}
               onSquare={handleSquare}
             />
             <OrbitControls
