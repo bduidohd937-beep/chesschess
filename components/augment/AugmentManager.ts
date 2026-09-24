@@ -157,7 +157,6 @@ export function recordPiecesLost(
   if (
     reached === null ||
     reached === "start" ||
-    state.nextSelection === reached ||
     state.selections.some((selection) => selection.phase === reached)
   ) {
     return { ...state, piecesLost };
