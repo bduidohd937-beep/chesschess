@@ -567,6 +567,12 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     flags: move.flags,
   }));
 
+  const moveHistory = game.history();
+  const movePairs = Array.from({ length: Math.ceil(moveHistory.length / 2) }, (_, index) => ({
+    number: index + 1,
+    white: moveHistory[index * 2],
+    black: moveHistory[index * 2 + 1],
+  }));
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
   const moveNumber = Math.floor(game.history().length / 2) + 1;
   const isCheck = game.isCheck() && !game.isGameOver();
@@ -787,6 +793,26 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             <div className="rule-row"><span>Legal moves</span><b>chess.js</b></div>
             <div className="rule-row"><span>Turn</span><b>{turn}</b></div>
             <div className="rule-row"><span>Total moves</span><b>{game.history().length}</b></div>
+          </div>
+
+          <div className="panel-card move-history-card">
+            <div className="battle-topline">
+              <div className="panel-label">MOVE HISTORY</div>
+              <span className="move-count">{moveHistory.length} MOVES</span>
+            </div>
+            <div className="move-history-list">
+              {movePairs.length === 0 ? (
+                <div className="move-history-empty">NO MOVES YET</div>
+              ) : (
+                movePairs.map((move) => (
+                  <div className="move-history-row" key={move.number}>
+                    <span className="move-number">{move.number}.</span>
+                    <span className={move.number === Math.ceil(moveHistory.length / 2) && moveHistory.length % 2 === 1 ? "move-san current" : "move-san"}>{move.white}</span>
+                    <span className={move.number === Math.ceil(moveHistory.length / 2) && moveHistory.length % 2 === 0 ? "move-san current" : "move-san"}>{move.black ?? "—"}</span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           <div className="panel-card">
