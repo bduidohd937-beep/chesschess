@@ -759,3 +759,394 @@ h1 {
   .augment-reroll { width: 100%; }
 }
 
+
+
+/* AUGMENT CHESS — dedicated TFT-style HUD */
+.augment-chess-app {
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 25%, rgba(128, 63, 166, .08), transparent 38%),
+    #07070a;
+}
+
+.augment-chess-app .chess-header,
+.augment-chess-app .side-panel {
+  display: none;
+}
+
+.augment-gamebar {
+  position: fixed;
+  z-index: 12;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(122, 91, 143, .28);
+  background: linear-gradient(180deg, rgba(8,7,11,.96), rgba(8,7,11,.72));
+  backdrop-filter: blur(14px);
+}
+
+.augment-gamebar button {
+  border: 0;
+  background: none;
+  color: #81748b;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .15em;
+  cursor: pointer;
+}
+
+.augment-gamebar button:hover { color: #d7b7e8; }
+
+.augment-gamebar-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.augment-gamebar-title span {
+  display: block;
+  color: #aa78c2;
+  font-size: 8px;
+  letter-spacing: .26em;
+  font-weight: 900;
+}
+
+.augment-gamebar-title b {
+  display: block;
+  margin-top: 5px;
+  color: #e9dfeb;
+  font: 500 20px/1 Georgia, serif;
+  letter-spacing: .04em;
+}
+
+.augment-loss-counter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #716676;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .13em;
+}
+
+.augment-loss-counter b {
+  color: #d4a6e5;
+  font-size: 12px;
+}
+
+.augment-hud {
+  position: fixed;
+  z-index: 10;
+  left: 22px;
+  top: 84px;
+  bottom: 22px;
+  width: 285px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.augment-hud-card {
+  pointer-events: auto;
+  border: 1px solid #2d2531;
+  border-radius: 12px;
+  background: rgba(12, 10, 15, .91);
+  box-shadow: 0 18px 55px rgba(0,0,0,.28);
+  backdrop-filter: blur(12px);
+}
+
+.augment-owned-panel {
+  flex: 1;
+  min-height: 0;
+  padding: 15px;
+  overflow: hidden;
+}
+
+.augment-hud-kicker {
+  color: #8f6a9e;
+  font-size: 8px;
+  letter-spacing: .2em;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+.augment-owned-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 175px);
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.augment-owned-grid::-webkit-scrollbar { width: 3px; }
+.augment-owned-grid::-webkit-scrollbar-thumb { background: #493650; border-radius: 5px; }
+
+.augment-empty {
+  padding: 22px 10px;
+  color: #4f4754;
+  text-align: center;
+  font-size: 8px;
+  letter-spacing: .14em;
+  font-weight: 900;
+}
+
+.augment-mini-card {
+  padding: 12px;
+  border: 1px solid #39313d;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #17131a, #0e0c11);
+}
+
+.augment-mini-card.tier-gold {
+  border-color: #58452a;
+  background: linear-gradient(145deg, #1b160e, #0e0c0a);
+}
+
+.augment-mini-card.tier-prism {
+  border-color: #61406e;
+  background: linear-gradient(145deg, #1b111f, #0e0b11);
+}
+
+.augment-mini-card.tier-transcendent {
+  border-color: #73552c;
+  background: linear-gradient(145deg, #1c1610, #100c0a);
+}
+
+.augment-mini-tier {
+  color: #aaa0ae;
+  font-size: 7px;
+  letter-spacing: .16em;
+  font-weight: 900;
+}
+
+.tier-gold .augment-mini-tier { color: #d1a94f; }
+.tier-prism .augment-mini-tier { color: #ce80ed; }
+.tier-transcendent .augment-mini-tier { color: #f0c65c; }
+
+.augment-mini-name {
+  margin-top: 6px;
+  color: #eee6f0;
+  font: 500 16px/1.15 Georgia, serif;
+}
+
+.augment-mini-description {
+  margin-top: 6px;
+  color: #817785;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.augment-battle-panel {
+  padding: 13px 15px;
+}
+
+.augment-battle-panel > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #655c69;
+  font-size: 7px;
+  letter-spacing: .12em;
+  font-weight: 900;
+}
+
+.augment-battle-panel > div:first-child b { color: #bca8c3; }
+
+.augment-progress-bar {
+  height: 4px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #241e27;
+}
+
+.augment-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #765080, #c47be4);
+  transition: width .3s ease;
+}
+
+.augment-hud-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 11px;
+  color: #635a67;
+  font-size: 8px;
+  letter-spacing: .1em;
+  font-weight: 800;
+}
+
+.augment-hud-stats b {
+  color: #d3c0d9;
+  margin-left: 4px;
+}
+
+.augment-select-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+
+.augment-select-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 3, 6, .73);
+  backdrop-filter: blur(8px);
+}
+
+.augment-select-panel {
+  position: relative;
+  width: min(1120px, 100%);
+  padding: 32px;
+  border: 1px solid #493450;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(157, 83, 190, .13), transparent 42%),
+    linear-gradient(145deg, #151019, #09080d);
+  box-shadow: 0 35px 120px rgba(0,0,0,.72);
+}
+
+.augment-select-kicker {
+  text-align: center;
+  color: #a678b8;
+  font-size: 9px;
+  letter-spacing: .22em;
+  font-weight: 900;
+}
+
+.augment-select-panel h2 {
+  margin: 8px 0 0;
+  text-align: center;
+  color: #f1e9f2;
+  font: 500 clamp(30px, 5vw, 48px)/1 Georgia, serif;
+}
+
+.augment-select-panel > p {
+  margin: 9px 0 25px;
+  text-align: center;
+  color: #776d7c;
+  font-size: 11px;
+}
+
+.augment-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.augment-choice-card {
+  min-height: 285px;
+  padding: 22px;
+  text-align: left;
+  border: 1px solid #3b3440;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #18131c, #0d0b10);
+  color: #eee5f1;
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.augment-choice-card:hover {
+  transform: translateY(-6px);
+  border-color: #a16ab6;
+  box-shadow: 0 18px 55px rgba(0,0,0,.4), 0 0 30px rgba(164,92,195,.12);
+}
+
+.augment-choice-card.tier-gold { border-color: #5c472c; }
+.augment-choice-card.tier-prism { border-color: #664174; }
+.augment-choice-card.tier-transcendent { border-color: #7a5b31; }
+
+.augment-choice-tier {
+  color: #a9a0ad;
+  font-size: 8px;
+  letter-spacing: .16em;
+  font-weight: 900;
+}
+
+.augment-choice-card.tier-gold .augment-choice-tier { color: #d5ab50; }
+.augment-choice-card.tier-prism .augment-choice-tier { color: #d083ef; }
+.augment-choice-card.tier-transcendent .augment-choice-tier { color: #f0c55b; }
+
+.augment-choice-card h3 {
+  margin: 50px 0 0;
+  font: 500 25px/1.15 Georgia, serif;
+}
+
+.augment-choice-card p {
+  margin: 12px 0 0;
+  color: #89808e;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.augment-choice-card span {
+  display: block;
+  margin-top: 28px;
+  color: #ae7ac0;
+  font-size: 8px;
+  letter-spacing: .16em;
+  font-weight: 900;
+}
+
+.augment-reroll-row {
+  margin-top: 17px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #665c6a;
+  font-size: 8px;
+  letter-spacing: .14em;
+  font-weight: 900;
+}
+
+.augment-reroll-row b { color: #d4b2df; margin-left: 6px; }
+
+.augment-reroll-row button {
+  border: 1px solid #65456f;
+  border-radius: 7px;
+  background: #171019;
+  color: #c99cda;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .13em;
+}
+
+.augment-reroll-row button:disabled { opacity: .35; cursor: not-allowed; }
+
+@media (max-width: 1000px) {
+  .augment-hud {
+    left: 12px;
+    width: 230px;
+  }
+  .augment-choice-card h3 { margin-top: 30px; }
+}
+
+@media (max-width: 760px) {
+  .augment-gamebar { padding: 0 14px; }
+  .augment-gamebar-title b { font-size: 16px; }
+  .augment-hud { left: 10px; right: 10px; bottom: 10px; top: auto; width: auto; }
+  .augment-owned-panel { max-height: 170px; }
+  .augment-owned-grid { flex-direction: row; overflow-x: auto; max-height: 120px; }
+  .augment-mini-card { min-width: 220px; }
+  .augment-select-overlay { padding: 12px; }
+  .augment-select-panel { padding: 20px 14px; max-height: 94vh; overflow-y: auto; }
+  .augment-choice-grid { grid-template-columns: 1fr; }
+  .augment-choice-card { min-height: 190px; }
+  .augment-choice-card h3 { margin-top: 22px; }
+  .augment-choice-card span { margin-top: 16px; }
+}
