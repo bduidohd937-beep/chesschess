@@ -469,3 +469,7 @@ h1 {
   .menu-topline { margin-bottom:28px; }
   .menu-topline span:last-child { display:none; }
 }
+
+
+.menu-back { border:0; background:none; color:#6f675d; font-size:9px; font-weight:800; letter-spacing:.16em; cursor:pointer; padding:0; }
+.menu-back:hover { color:#c7b99f; }
