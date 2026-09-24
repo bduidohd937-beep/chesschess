@@ -436,7 +436,7 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
   );
 }
 
-export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, onlinePlayerColor }: { onBackToMenu?: () => void; onlineSocket?: Socket | null; onlineRoomId?: string; onlinePlayerColor?: "w" | "b" }) {
+export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, onlinePlayerColor, onPieceCaptured, augmentMode }: { onBackToMenu?: () => void; onlineSocket?: Socket | null; onlineRoomId?: string; onlinePlayerColor?: "w" | "b"; onPieceCaptured?: (color: "w" | "b") => void; augmentMode?: boolean }) {
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
@@ -625,6 +625,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         const moveObject = legalMoveObjects.find((move) => move.to === square);
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
+        if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
         if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square });
         setLastMove({ from: selected, to: square });
         setCaptureSquare(captured ? square : null);
@@ -651,6 +652,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       const moveObject = legalMoveObjects.find((move) => move.to === pendingPromotion.to);
       const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
       setGame(nextGame);
+      if (captured) onPieceCaptured?.("w");
       if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece });
       setLastMove({ from: pendingPromotion.from, to: pendingPromotion.to });
       setCaptureSquare(captured ? pendingPromotion.to : null);
@@ -681,8 +683,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     <main className="chess-app">
       <header className="chess-header">
         <div>
-          <div className="eyebrow">{onlineSocket ? "ONLINE 1V1" : "3D CHESS"}</div>
-          <h1>{onlineSocket ? `Room ${onlineRoomId ?? ""}` : "Classic Chess"}</h1>
+          <div className="eyebrow">{augmentMode ? "AUGMENT CHESS" : onlineSocket ? "ONLINE 1V1" : "3D CHESS"}</div>
+          <h1>{augmentMode ? "Augment Battlefield" : onlineSocket ? `Room ${onlineRoomId ?? ""}` : "Classic Chess"}</h1>
         </div>
         <div className="status">
           <span className={game.turn() === "w" ? "turn-dot white" : "turn-dot black"} />
@@ -729,7 +731,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
 
         <aside className="side-panel">
           <div className="panel-card">
-            <div className="panel-label">{onlineSocket ? "ONLINE MATCH" : "OPPONENT"}</div>
+            <div className="panel-label">{augmentMode ? "AUGMENT BATTLE" : onlineSocket ? "ONLINE MATCH" : "OPPONENT"}</div>
             {onlineSocket ? (
               <div className="game-status">
                 YOU ARE {onlinePlayerColor === "w" ? "WHITE" : "BLACK"} · {onlineStatus}
