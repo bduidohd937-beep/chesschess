@@ -1208,3 +1208,15 @@ h1 {
   opacity: .35;
   cursor: not-allowed;
 }
+
+.augment-mini-card.augment-active{
+  border-color:#d98cff;
+  box-shadow:0 0 0 1px rgba(217,140,255,.32),0 0 24px rgba(217,140,255,.22),inset 0 0 22px rgba(217,140,255,.08);
+  animation:augment-active-pulse 1.8s ease-in-out infinite;
+}
+.augment-mini-card.augment-active .augment-mini-name{color:#f0c8ff;text-shadow:0 0 14px rgba(217,140,255,.42);}
+.augment-active-label{margin-top:8px;color:#d98cff;font-size:8px;font-weight:900;letter-spacing:.12em;}
+@keyframes augment-active-pulse{
+  0%,100%{box-shadow:0 0 0 1px rgba(217,140,255,.25),0 0 16px rgba(217,140,255,.14),inset 0 0 16px rgba(217,140,255,.05)}
+  50%{box-shadow:0 0 0 1px rgba(217,140,255,.5),0 0 30px rgba(217,140,255,.3),inset 0 0 26px rgba(217,140,255,.1)}
+}
