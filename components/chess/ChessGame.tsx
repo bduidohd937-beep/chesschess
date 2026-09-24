@@ -950,11 +950,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           );
           const customGame = makeCustomMove(game, selected, square);
           if (!customGame) {
-            // S002 is a legal augment move; keep its own path independent from normal move generation.
-            if (!(isS002Move)) {
-              setSelected(null);
-              return;
-            }
+            setSelected(null);
+            return;
           }
           const captured = Boolean(game.get(square));
           setGame(customGame);
