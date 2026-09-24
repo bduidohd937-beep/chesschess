@@ -544,6 +544,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [captureSquare, setCaptureSquare] = useState<Square | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [g001Uses, setG001Uses] = useState(2);
+  const [s004Used, setS004Used] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
   const [aiThinking, setAiThinking] = useState(false);
@@ -693,13 +694,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           extraTargets.push(two);
         }
 
-        const pawnMoveAlreadyMade = game.history({ verbose: true }).some((move) => {
-          return move.piece === "p";
-        });
-
         if (
           hasAugment(augmentState, "S004") &&
-          !pawnMoveAlreadyMade &&
+          !s004Used &&
           forward3 >= 1 && forward3 <= 8 &&
           !game.get(one) && !game.get(two) && !game.get(three) &&
           makeCustomMove(game, selected, three)
@@ -821,7 +818,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     } catch {
       return [];
     }
-  }, [game, selected, augmentMode, augmentState]);
+  }, [game, selected, augmentMode, augmentState, s004Used]);
 
   const effectiveLegalMoveObjects = legalMoveObjects.filter(
     (move) => move.flags !== "g" || g001Uses > 0,
@@ -911,66 +908,71 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
         const isCustomAugmentMove = Boolean(moveObject && moveObject.flags === "a");
         if (isCustomAugmentMove) {
-          const isG002Move = Boolean(
-            augmentMode &&
-            augmentState &&
-            hasAugment(augmentState, "G002") &&
-            movingPiece?.type === "n" &&
-            game.board().flat().filter((item) => item?.type === "n" && item.color === movingPiece.color).length === 1
-          );
-          const isS001Move = Boolean(
-            moveObject &&
-            moveObject.flags === "a" &&
-            augmentMode &&
-            augmentState &&
-            hasAugment(augmentState, "S001") &&
-            movingPiece?.type === "p" &&
-            square[0] === selected[0] &&
-            Number(square[1]) - Number(selected[1]) === (movingPiece.color === "w" ? 2 : -2)
-          );
-          const isS002Move = Boolean(
-            moveObject &&
-            moveObject.flags === "a" &&
-            augmentMode &&
-            augmentState &&
-            hasAugment(augmentState, "S002") &&
-            movingPiece?.type === "n" &&
-            square[0] === selected[0] &&
-            Number(square[1]) - Number(selected[1]) === (movingPiece.color === "w" ? 1 : -1)
-          );
-          const isS004Move = Boolean(
-            moveObject &&
-            moveObject.flags === "a" &&
-            augmentMode &&
-            augmentState &&
-            hasAugment(augmentState, "S004") &&
-            movingPiece?.type === "p" &&
-            Math.abs(Number(square[1]) - Number(selected[1])) === 3 &&
-            !game.history({ verbose: true }).some((move) => move.piece === "p")
-          );
+          const deltaRank = Number(square[1]) - Number(selected[1]);
+          const absFile = Math.abs(square.charCodeAt(0) - selected.charCodeAt(0));
+          const absRank = Math.abs(deltaRank);
+          let customAugment: AugmentId | null = null;
+
+          if (movingPiece?.type === "p") {
+            if (absRank === 3 && hasAugment(augmentState!, "S004") && !s004Used) {
+              customAugment = "S004";
+            } else if (
+              absRank === 2 &&
+              square[0] === selected[0] &&
+              game.get(`${selected[0]}${Number(selected[1]) + (movingPiece.color === "w" ? 1 : -1)}` as Square)
+            ) {
+              customAugment = "S003";
+            } else if (absRank === 2 && square[0] === selected[0]) {
+              customAugment = "S001";
+            }
+          } else if (movingPiece?.type === "n") {
+            const knightCount = game.board().flat().filter((item) => item?.type === "n" && item.color === movingPiece.color).length;
+            if (knightCount === 1 && ((absFile === 0 && absRank > 0) || (absRank === 0 && absFile > 0) || absFile === absRank)) {
+              customAugment = "G002";
+            } else if (absFile === 0 && absRank === 1) {
+              customAugment = "S002";
+            }
+          }
+
+          if (!customAugment || !augmentState || !hasAugment(augmentState, customAugment)) {
+            setSelected(null);
+            return;
+          }
+
           const customGame = makeCustomMove(game, selected, square);
           if (!customGame) {
             setSelected(null);
             return;
           }
+
           const captured = Boolean(game.get(square));
           setGame(customGame);
-          if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
           setLastMove({ from: selected, to: square });
           setCaptureSquare(captured ? square : null);
-          if (onlineSocket && onlineRoomId && (isG002Move || isS001Move || isS002Move || isS004Move)) {
-            onlineSocket.emit("move", {
-              roomId: onlineRoomId,
-              from: selected,
-              to: square,
-              custom: true,
-              augment: isG002Move ? "G002" : isS001Move ? "S001" : isS002Move ? "S002" : "S004",
-            });
+          if (customAugment === "S004") setS004Used(true);
+
+          if (onlineSocket && onlineRoomId) {
+            onlineSocket.emit(
+              "move",
+              { roomId: onlineRoomId, from: selected, to: square, custom: true, augment: customAugment },
+              (result: { ok?: boolean; error?: string }) => {
+                if (!result?.ok) {
+                  setGame(game);
+                  setLastMove(null);
+                  setCaptureSquare(null);
+                  if (customAugment === "S004") setS004Used(false);
+                  return;
+                }
+                if (captured) onPieceCaptured?.(movingPiece?.color ?? game.turn());
+              },
+            );
+          } else if (captured) {
+            onPieceCaptured?.(movingPiece?.color ?? game.turn());
           }
+
           setSelected(null);
           return;
         }
-
         nextGame.move({ from: selected, to: square });
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
@@ -1037,6 +1039,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setCaptureSquare(null);
     setPendingPromotion(null);
     setG001Uses(2);
+    setS004Used(false);
     setOnlineGameOver(false);
   }
 
