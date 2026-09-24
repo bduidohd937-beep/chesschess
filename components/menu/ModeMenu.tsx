@@ -2,6 +2,7 @@
 
 type ModeMenuProps = {
   onSelectClassic: () => void;
+  onSelectOnline: () => void;
 };
 
 export default function ModeMenu({ onSelectClassic }: ModeMenuProps) {
@@ -21,11 +22,11 @@ export default function ModeMenu({ onSelectClassic }: ModeMenuProps) {
           <span className="mode-action">PLAY CLASSIC</span>
         </button>
 
-        <button className="mode-card augment" onClick={() => {}}>
+        <button className="mode-card augment" onClick={onSelectOnline}>
           <span className="mode-icon">✦</span>
-          <span className="mode-title">AUGMENT CHESS</span>
-          <span className="mode-description">Chess rebuilt around augments and strategy.</span>
-          <span className="mode-action">COMING SOON</span>
+          <span className="mode-title">ONLINE 1V1</span>
+          <span className="mode-description">Create a room and play real-time with a friend.</span>
+          <span className="mode-action">PLAY ONLINE</span>
         </button>
       </section>
 
