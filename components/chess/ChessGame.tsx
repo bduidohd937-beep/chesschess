@@ -722,7 +722,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         const forward = fromRank + direction;
         if (forward >= 1 && forward <= 8) {
           const target = `${files[fromFile]}${forward}` as Square;
-          if (game.get(target)?.color !== piece.color && makeCustomMove(game, selected, target)) {
+          if (game.get(target)?.color !== piece.color) {
             extraTargets.push(target);
           }
         }
@@ -950,8 +950,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           );
           const customGame = makeCustomMove(game, selected, square);
           if (!customGame) {
-            setSelected(null);
-            return;
+            // S002 is a legal augment move; keep its own path independent from normal move generation.
+            if (!(isS002Move)) {
+              setSelected(null);
+              return;
+            }
           }
           const captured = Boolean(game.get(square));
           setGame(customGame);
