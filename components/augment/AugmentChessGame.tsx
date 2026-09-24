@@ -11,13 +11,14 @@ import {
   recordPiecesLost,
   rerollCurrentSelection,
 } from "./AugmentManager";
-import type { AugmentGameState, AugmentId, AugmentSelection } from "./types";
+import type { AugmentGameState, AugmentId, AugmentSelection, AugmentTier } from "./types";
 
 type Props = {
   onBackToMenu?: () => void;
   onlineSocket?: Socket | null;
   onlineRoomId?: string;
   onlinePlayerColor?: "w" | "b";
+  startAugmentTiers?: AugmentTier[];
 };
 
 const TIER_LABELS = {
@@ -32,8 +33,9 @@ export default function AugmentChessGame({
   onlineSocket,
   onlineRoomId,
   onlinePlayerColor,
+  startAugmentTiers,
 }: Props) {
-  const [state, setState] = useState<AugmentGameState>(() => createAugmentGameState());
+  const [state, setState] = useState<AugmentGameState>(() => createAugmentGameState(startAugmentTiers));
   const current = getCurrentSelection(state);
   const selecting = Boolean(current && !current.selected);
 
@@ -41,8 +43,8 @@ export default function AugmentChessGame({
     setState((previous) => chooseAugment(previous, id));
   }
 
-  function reroll() {
-    setState((previous) => rerollCurrentSelection(previous));
+  function reroll(optionIndex: number) {
+    setState((previous) => rerollCurrentSelection(previous, optionIndex));
   }
 
   function onPieceCaptured(_color: "w" | "b") {
