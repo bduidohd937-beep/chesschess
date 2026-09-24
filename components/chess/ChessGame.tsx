@@ -914,6 +914,14 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             Math.abs(Number(square[1]) - Number(selected[1])) === 2 &&
             square[0] === selected[0]
           );
+          const isS002Move = Boolean(
+            augmentMode &&
+            augmentState &&
+            hasAugment(augmentState, "S002") &&
+            movingPiece?.type === "n" &&
+            square[0] === selected[0] &&
+            Math.abs(Number(square[1]) - Number(selected[1])) === 1
+          );
           const customGame = makeCustomMove(game, selected, square);
           if (!customGame) {
             setSelected(null);
@@ -924,13 +932,13 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
           setLastMove({ from: selected, to: square });
           setCaptureSquare(captured ? square : null);
-          if (onlineSocket && onlineRoomId && (isG002Move || isS001Move)) {
+          if (onlineSocket && onlineRoomId && (isG002Move || isS001Move || isS002Move)) {
             onlineSocket.emit("move", {
               roomId: onlineRoomId,
               from: selected,
               to: square,
               custom: true,
-              augment: isG002Move ? "G002" : "S001",
+              augment: isG002Move ? "G002" : isS001Move ? "S001" : "S002",
             });
           }
           setSelected(null);
