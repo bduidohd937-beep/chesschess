@@ -568,7 +568,15 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   }));
 
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
+  const moveNumber = Math.floor(game.history().length / 2) + 1;
+  const isCheck = game.isCheck() && !game.isGameOver();
   const isGameOver = game.isGameOver() || onlineGameOver;
+  const whitePlayerLabel = onlineSocket
+    ? onlinePlayerColor === "w" ? "YOU" : "OPPONENT"
+    : "PLAYER 1";
+  const blackPlayerLabel = onlineSocket
+    ? onlinePlayerColor === "b" ? "YOU" : "OPPONENT"
+    : aiEnabled ? "STOCKFISH" : "PLAYER 2";
   const resultTitle = onlineStatus === "OPPONENT LEFT"
     ? "OPPONENT LEFT"
     : game.isCheckmate()
@@ -739,9 +747,38 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             )}
           </div>
 
-          <div className="panel-card">
-            <div className="panel-label">GAME</div>
-            <div className="game-status">{aiThinking ? "AI THINKING" : status}</div>
+          <div className="panel-card battle-card">
+            <div className="battle-topline">
+              <div className="panel-label">BATTLE INFO</div>
+              <div className={isCheck ? "check-badge visible" : "check-badge"}>{isCheck ? "CHECK" : "CLEAR"}</div>
+            </div>
+
+            <div className="player-row">
+              <div className={game.turn() === "w" ? "player-side active" : "player-side"}>
+                <span className="player-piece white-piece">♔</span>
+                <div>
+                  <div className="player-color">WHITE</div>
+                  <div className="player-name">{whitePlayerLabel}</div>
+                </div>
+              </div>
+              {game.turn() === "w" && <span className="turn-badge">TURN</span>}
+            </div>
+
+            <div className="player-row">
+              <div className={game.turn() === "b" ? "player-side active" : "player-side"}>
+                <span className="player-piece black-piece">♚</span>
+                <div>
+                  <div className="player-color">BLACK</div>
+                  <div className="player-name">{blackPlayerLabel}</div>
+                </div>
+              </div>
+              {game.turn() === "b" && <span className="turn-badge">TURN</span>}
+            </div>
+
+            <div className="battle-meta">
+              <div><span>MOVE</span><b>{moveNumber}</b></div>
+              <div><span>STATUS</span><b>{aiThinking ? "AI THINKING" : status}</b></div>
+            </div>
             <p>Click a piece, then click a highlighted square.</p>
           </div>
 
@@ -749,7 +786,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             <div className="panel-label">RULES ENGINE</div>
             <div className="rule-row"><span>Legal moves</span><b>chess.js</b></div>
             <div className="rule-row"><span>Turn</span><b>{turn}</b></div>
-            <div className="rule-row"><span>Moves</span><b>{game.history().length}</b></div>
+            <div className="rule-row"><span>Total moves</span><b>{game.history().length}</b></div>
           </div>
 
           <div className="panel-card">
