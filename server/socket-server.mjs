@@ -30,6 +30,15 @@ io.on("connection",socket=>{
   io.to(room.white).emit("game-start",{roomId,color:"w"});
  });
 
+ socket.on("new-game",({roomId},reply)=>{
+  const room=rooms.get(roomId);
+  if(!room||socket.data.roomId!==roomId)return reply?.({ok:false,error:"INVALID ROOM"});
+  if(!room.white||!room.black)return reply?.({ok:false,error:"WAITING FOR OPPONENT"});
+  room.game=new Chess();
+  io.to(roomId).emit("game-reset",{fen:room.game.fen()});
+  reply?.({ok:true});
+ });
+
  socket.on("move",({roomId,from,to,promotion},reply)=>{
   const room=rooms.get(roomId);
   if(!room||socket.data.roomId!==roomId)return reply?.({ok:false,error:"INVALID ROOM"});
