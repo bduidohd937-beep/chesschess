@@ -32,25 +32,115 @@ function Piece({ type, color, square, selected, onClick }: {
   onClick: () => void;
 }) {
   const [x, , z] = squarePosition(square);
-  const isWhite = color === "w";
+  const white = color === "w";
+  const main = selected ? "#d7b65d" : white ? "#f4efe2" : "#211d1a";
+  const edge = selected ? "#f0d477" : white ? "#d9d0bf" : "#0e0c0b";
 
   return (
-    <group position={[x, 0.12, z]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      <mesh castShadow position={[0, 0.18, 0]}>
-        <cylinderGeometry args={[0.28, 0.34, 0.18, 32]} />
-        <meshStandardMaterial color={selected ? "#d7b65d" : isWhite ? "#eee8d5" : "#26221f"} metalness={0.18} roughness={0.28} />
+    <group position={[x, 0.1, z]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
+      <mesh castShadow position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[0.34, 0.4, 0.16, 40]} />
+        <meshStandardMaterial color={edge} metalness={0.18} roughness={0.24} />
       </mesh>
-      <mesh castShadow position={[0, 0.48, 0]}>
-        <cylinderGeometry args={type === "p" ? [0.17,0.25,0.5,24] : [0.22,0.29,0.62,24]} />
-        <meshStandardMaterial color={selected ? "#d7b65d" : isWhite ? "#f7f1df" : "#171412"} metalness={0.12} roughness={0.3} />
-      </mesh>
-      <mesh castShadow position={[0, 0.82, 0]}>
-        <sphereGeometry args={[type === "p" ? 0.18 : 0.24, 24, 16]} />
-        <meshStandardMaterial color={selected ? "#d7b65d" : isWhite ? "#f7f1df" : "#171412"} metalness={0.12} roughness={0.3} />
-      </mesh>
-      <sprite position={[0, 1.18, 0]} scale={[0.7,0.7,0.7]}>
-        <spriteMaterial transparent opacity={0.95} color={isWhite ? "#ffffff" : "#d9d0c5"} />
-      </sprite>
+
+      {type === "p" && <>
+        <mesh castShadow position={[0, 0.42, 0]}>
+          <latheGeometry args={[[
+            new THREE.Vector2(0.17, 0),
+            new THREE.Vector2(0.23, 0.12),
+            new THREE.Vector2(0.19, 0.25),
+            new THREE.Vector2(0.15, 0.48),
+            new THREE.Vector2(0.22, 0.54),
+          ], 32]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh castShadow position={[0, 0.88, 0]}>
+          <sphereGeometry args={[0.2, 32, 20]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+      </>}
+
+      {type === "r" && <>
+        <mesh castShadow position={[0, 0.43, 0]}>
+          <cylinderGeometry args={[0.22, 0.29, 0.55, 32]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh castShadow position={[0, 0.8, 0]}>
+          <cylinderGeometry args={[0.31, 0.27, 0.16, 12]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        {[-0.18, 0, 0.18].map((x) => <mesh key={x} castShadow position={[x, 0.95, 0]}>
+          <boxGeometry args={[0.1, 0.18, 0.24]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>)}
+      </>}
+
+      {type === "b" && <>
+        <mesh castShadow position={[0, 0.48, 0]}>
+          <coneGeometry args={[0.29, 0.72, 32]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh castShadow position={[0, 0.9, 0]}>
+          <sphereGeometry args={[0.17, 28, 18]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0.89, 0.13]} rotation={[0.35, 0, 0]}>
+          <boxGeometry args={[0.045, 0.28, 0.06]} />
+          <meshStandardMaterial color={edge} />
+        </mesh>
+      </>}
+
+      {type === "n" && <>
+        <mesh castShadow position={[0, 0.53, 0]} rotation={[0, 0, -0.12]}>
+          <capsuleGeometry args={[0.23, 0.55, 8, 20]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh castShadow position={[0.08, 0.9, 0.02]} rotation={[0, 0, -0.18]}>
+          <coneGeometry args={[0.19, 0.42, 4]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+      </>}
+
+      {type === "q" && <>
+        <mesh castShadow position={[0, 0.5, 0]}>
+          <latheGeometry args={[[
+            new THREE.Vector2(0.18, 0),
+            new THREE.Vector2(0.28, 0.18),
+            new THREE.Vector2(0.22, 0.55),
+            new THREE.Vector2(0.29, 0.68),
+          ], 32]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh castShadow position={[0, 1.0, 0]}>
+          <sphereGeometry args={[0.24, 28, 18]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        {[0, Math.PI/2, Math.PI, Math.PI*1.5].map((a) => <mesh key={a} castShadow position={[Math.cos(a)*0.17, 0.91, Math.sin(a)*0.17]}>
+          <sphereGeometry args={[0.07, 16, 12]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>)}
+      </>}
+
+      {type === "k" && <>
+        <mesh castShadow position={[0, 0.5, 0]}>
+          <latheGeometry args={[[
+            new THREE.Vector2(0.19, 0),
+            new THREE.Vector2(0.3, 0.18),
+            new THREE.Vector2(0.24, 0.52),
+            new THREE.Vector2(0.3, 0.67),
+          ], 32]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh castShadow position={[0, 0.96, 0]}>
+          <boxGeometry args={[0.14, 0.42, 0.14]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+        <mesh castShadow position={[0, 0.96, 0]}>
+          <boxGeometry args={[0.42, 0.14, 0.14]} />
+          <meshStandardMaterial color={main} metalness={0.08} roughness={0.2} />
+        </mesh>
+      </>}
+
     </group>
   );
 }
@@ -172,7 +262,7 @@ export default function ChessGame() {
 
       <section className="chess-layout">
         <div className="board-shell">
-          <Canvas shadows camera={{ position: [0, 7.8, 8.2], fov: 42 }}>
+          <Canvas shadows camera={{ position: [0, 7.8, -8.2], fov: 42 }}>
             <color attach="background" args={["#10100f"]} />
             <ambientLight intensity={1.7} />
             <directionalLight castShadow position={[4, 9, 5]} intensity={3.2} shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
