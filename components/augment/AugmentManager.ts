@@ -38,31 +38,40 @@ function weightedTier(): AugmentTier {
   return "silver";
 }
 
-function drawOptions(excluded: Set<AugmentId>): AugmentId[] {
-  const available = AUGMENTS.filter((augment) => !excluded.has(augment.id));
+function drawOne(tier: AugmentTier, excluded: Set<AugmentId>): AugmentId | null {
+  const candidates = AUGMENTS.filter(
+    (augment) => augment.tier === tier && !excluded.has(augment.id),
+  );
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)].id;
+}
+
+function drawOptions(excluded: Set<AugmentId>, forcedTiers?: AugmentTier[]): AugmentId[] {
   const result: AugmentId[] = [];
 
-  while (result.length < AUGMENT_OPTION_COUNT && available.length > 0) {
-    const tier = weightedTier();
-    const candidates = available.filter((augment) => augment.tier === tier);
+  for (let index = 0; index < AUGMENT_OPTION_COUNT; index += 1) {
+    const tier = forcedTiers?.[index] ?? weightedTier();
+    const picked = drawOne(tier, excluded);
 
-    if (candidates.length === 0) {
-      const fallback = available[Math.floor(Math.random() * available.length)];
-      result.push(fallback.id);
-      available.splice(available.indexOf(fallback), 1);
+    if (picked) {
+      result.push(picked);
+      excluded.add(picked);
       continue;
     }
 
-    const picked = candidates[Math.floor(Math.random() * candidates.length)];
-    result.push(picked.id);
-    available.splice(available.indexOf(picked), 1);
+    const fallback = AUGMENTS.filter((augment) => !excluded.has(augment.id));
+    if (fallback.length === 0) break;
+
+    const random = fallback[Math.floor(Math.random() * fallback.length)];
+    result.push(random.id);
+    excluded.add(random.id);
   }
 
   return result;
 }
 
-export function createAugmentGameState(): AugmentGameState {
-  const selection = createSelection("start", [], []);
+export function createAugmentGameState(startTiers?: AugmentTier[]): AugmentGameState {
+  const selection = createSelection("start", [], [], startTiers);
   return {
     piecesLost: 0,
     rerollsRemaining: INITIAL_REROLLS,
@@ -76,11 +85,12 @@ function createSelection(
   phase: Exclude<AugmentSelectionPhase, "complete">,
   ownedAugments: AugmentId[],
   previousOptions: AugmentId[],
+  forcedTiers?: AugmentTier[],
 ): AugmentSelection {
   const excluded = new Set([...ownedAugments, ...previousOptions]);
   return {
     phase,
-    options: drawOptions(excluded),
+    options: drawOptions(excluded, forcedTiers),
     selected: null,
     rerollsUsed: 0,
   };
@@ -90,14 +100,40 @@ export function getCurrentSelection(state: AugmentGameState) {
   return state.selections[state.selections.length - 1] ?? null;
 }
 
-export function rerollCurrentSelection(state: AugmentGameState): AugmentGameState {
+/**
+ * Rerolls exactly one card.
+ * The replacement keeps the original card's tier and consumes one shared reroll.
+ */
+export function rerollCurrentSelection(
+  state: AugmentGameState,
+  optionIndex: number,
+): AugmentGameState {
   const current = getCurrentSelection(state);
-  if (!current || current.selected || state.rerollsRemaining <= 0) return state;
+  if (
+    !current ||
+    current.selected ||
+    state.rerollsRemaining <= 0 ||
+    optionIndex < 0 ||
+    optionIndex >= current.options.length
+  ) {
+    return state;
+  }
+
+  const oldId = current.options[optionIndex];
+  const oldDefinition = getAugmentDefinition(oldId);
+  if (!oldDefinition) return state;
 
   const excluded = new Set<AugmentId>([
     ...state.ownedAugments,
     ...current.options,
   ]);
+  excluded.delete(oldId);
+
+  const replacement = drawOne(oldDefinition.tier, excluded);
+  if (!replacement) return state;
+
+  const options = [...current.options];
+  options[optionIndex] = replacement;
 
   return {
     ...state,
@@ -106,7 +142,7 @@ export function rerollCurrentSelection(state: AugmentGameState): AugmentGameStat
       ...state.selections.slice(0, -1),
       {
         ...current,
-        options: drawOptions(excluded),
+        options,
         rerollsUsed: current.rerollsUsed + 1,
       },
     ],
