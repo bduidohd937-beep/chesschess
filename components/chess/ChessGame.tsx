@@ -927,10 +927,10 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             }
           } else if (movingPiece?.type === "n") {
             const knightCount = game.board().flat().filter((item) => item?.type === "n" && item.color === movingPiece.color).length;
-            if (knightCount === 1 && ((absFile === 0 && absRank > 0) || (absRank === 0 && absFile > 0) || absFile === absRank)) {
-              customAugment = "G002";
-            } else if (absFile === 0 && absRank === 1) {
+            if (absFile === 0 && absRank === 1) {
               customAugment = "S002";
+            } else if (knightCount === 1 && ((absFile === 0 && absRank > 0) || (absRank === 0 && absFile > 0) || absFile === absRank)) {
+              customAugment = "G002";
             }
           }
 
