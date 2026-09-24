@@ -5,6 +5,7 @@ import { Chess, type Color, type PieceSymbol } from "chess.js";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
+import type { Socket } from "socket.io-client";
 
 type Square = string;
 type PromotionPiece = "q" | "r" | "b" | "n";
@@ -436,7 +437,7 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
   );
 }
 
-export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void }) {
+export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, onlinePlayerColor }: { onBackToMenu?: () => void; onlineSocket?: Socket | null; onlineRoomId?: string; onlinePlayerColor?: "w" | "b" }) {
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
@@ -451,6 +452,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   const aiSearchIdRef = useRef(0);
 
   useEffect(() => {
+    if (onlineSocket) return;
     const worker = new Worker("/stockfish.wasm.js");
     stockfishRef.current = worker;
     worker.onmessage = (event) => {
@@ -494,9 +496,10 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
       engineReadyRef.current = false;
       setEngineReady(false);
     };
-  }, []);
+  }, [onlineSocket]);
 
   useEffect(() => {
+    if (onlineSocket) return;
     if (!aiEnabled || game.turn() !== "b" || game.isGameOver() || pendingPromotion || !engineReady) return;
     const worker = stockfishRef.current;
     if (!worker) return;
@@ -511,7 +514,20 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
     return () => {
       if (searchId === aiSearchIdRef.current) worker.postMessage("stop");
     };
-  }, [aiEnabled, aiLevel, game, pendingPromotion, engineReady]);
+  }, [aiEnabled, aiLevel, game, pendingPromotion, engineReady, onlineSocket]);
+
+  useEffect(() => {
+    if (!onlineSocket) return;
+    const onOpponentMove = ({ fen }: { fen: string }) => {
+      setGame(new Chess(fen));
+      setSelected(null);
+      setLastMove(null);
+      setCaptureSquare(null);
+      setPendingPromotion(null);
+    };
+    onlineSocket.on("opponent-move", onOpponentMove);
+    return () => { onlineSocket.off("opponent-move", onOpponentMove); };
+  }, [onlineSocket]);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
@@ -541,6 +557,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
 
   function handleSquare(square: Square) {
     if (aiThinking || pendingPromotion) return;
+    if (onlineSocket && game.turn() !== onlinePlayerColor) return;
     const piece = game.get(square as any);
 
     if (selected && legalMoves.some((move) => move.to === square)) {
@@ -556,6 +573,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
         const moveObject = legalMoveObjects.find((move) => move.to === square);
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
+        if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, fen: nextGame.fen() });
         setLastMove({ from: selected, to: square });
         setCaptureSquare(captured ? square : null);
         setSelected(null);
@@ -581,6 +599,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
       const moveObject = legalMoveObjects.find((move) => move.to === pendingPromotion.to);
       const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
       setGame(nextGame);
+      if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, fen: nextGame.fen() });
       setLastMove({ from: pendingPromotion.from, to: pendingPromotion.to });
       setCaptureSquare(captured ? pendingPromotion.to : null);
       setPendingPromotion(null);
@@ -606,8 +625,8 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
     <main className="chess-app">
       <header className="chess-header">
         <div>
-          <div className="eyebrow">3D CHESS</div>
-          <h1>Classic Chess</h1>
+          <div className="eyebrow">{onlineSocket ? "ONLINE 1V1" : "3D CHESS"}</div>
+          <h1>{onlineSocket ? `Room ${onlineRoomId ?? ""}` : "Classic Chess"}</h1>
         </div>
         <div className="status">
           <span className={game.turn() === "w" ? "turn-dot white" : "turn-dot black"} />
@@ -654,12 +673,12 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
 
         <aside className="side-panel">
           <div className="panel-card">
-            <div className="panel-label">OPPONENT</div>
-            <div className="ai-toggle-row">
+            <div className="panel-label">{onlineSocket ? "ONLINE MATCH" : "OPPONENT"}</div>
+            {onlineSocket ? <div className="game-status">YOU ARE {onlinePlayerColor === "w" ? "WHITE" : "BLACK"}</div> : <div className="ai-toggle-row">
               <button className={`ai-choice ${aiEnabled ? "active" : ""}`} onClick={() => { setAiEnabled(true); setAiThinking(false); }}>VS AI</button>
               <button className={`ai-choice ${!aiEnabled ? "active" : ""}`} onClick={() => { stockfishRef.current?.postMessage("stop"); setAiEnabled(false); setAiThinking(false); }}>2 PLAYER</button>
             </div>
-            {aiEnabled && (
+            {!onlineSocket && aiEnabled && (
               <div className="ai-levels">
                 {(Object.keys(AI_LEVELS) as AiLevel[]).map((level) => (
                   <button key={level} className={`ai-level ${aiLevel === level ? "active" : ""}`} onClick={() => setAiLevel(level)}>
@@ -668,6 +687,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
                 ))}
               </div>
             )}
+            {!onlineSocket && null}
           </div>
 
           <div className="panel-card">
@@ -685,7 +705,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
 
           <div className="panel-card">
             <div className="panel-label">COMING NEXT</div>
-            <div className="next-item">✓ Offline Stockfish AI</div>
+            <div className="next-item">{onlineSocket ? "✓ Real-time Socket.IO" : "✓ Offline Stockfish AI"}</div>
             <div className="next-item">♟ Online 1v1 Rooms</div>
             <div className="next-item">♟ Real 3D Chess Pieces</div>
           </div>
