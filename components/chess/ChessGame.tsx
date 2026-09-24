@@ -446,6 +446,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
   const [aiThinking, setAiThinking] = useState(false);
   const [onlineStatus, setOnlineStatus] = useState("CONNECTED");
+  const [onlineGameOver, setOnlineGameOver] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const stockfishRef = useRef<Worker | null>(null);
   const engineReadyRef = useRef(false);
@@ -518,15 +519,37 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
 
   useEffect(() => {
     if (!onlineSocket) return;
-    const onOpponentMove = ({ fen }: { fen: string }) => {
+    const onOpponentMove = ({ fen, from, to }: { fen: string; from?: Square; to?: Square }) => {
+      setGame(new Chess(fen));
+      setSelected(null);
+      setLastMove(from && to ? { from, to } : null);
+      setCaptureSquare(null);
+      setPendingPromotion(null);
+      setOnlineGameOver(new Chess(fen).isGameOver());
+    };
+    const onGameReset = ({ fen }: { fen: string }) => {
       setGame(new Chess(fen));
       setSelected(null);
       setLastMove(null);
       setCaptureSquare(null);
       setPendingPromotion(null);
+      setOnlineGameOver(false);
+    };
+    const onOpponentDisconnected = () => {
+      setOnlineStatus("OPPONENT LEFT");
+      setOnlineGameOver(true);
+      setSelected(null);
+      setPendingPromotion(null);
     };
     onlineSocket.on("opponent-move", onOpponentMove);
-    return () => { onlineSocket.off("opponent-move", onOpponentMove); };
+    onlineSocket.on("game-reset", onGameReset);
+    onlineSocket.on("opponent-disconnected", onOpponentDisconnected);
+    setOnlineStatus("CONNECTED");
+    return () => {
+      onlineSocket.off("opponent-move", onOpponentMove);
+      onlineSocket.off("game-reset", onGameReset);
+      onlineSocket.off("opponent-disconnected", onOpponentDisconnected);
+    };
   }, [onlineSocket]);
 
   const legalMoveObjects = useMemo(() => {
@@ -556,7 +579,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           : `${turn} TO MOVE`;
 
   function handleSquare(square: Square) {
-    if (aiThinking || pendingPromotion) return;
+    if (aiThinking || pendingPromotion || onlineGameOver) return;
     if (onlineSocket && game.turn() !== onlinePlayerColor) return;
     const piece = game.get(square as any);
 
@@ -611,6 +634,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   }
 
   function reset() {
+    if (onlineSocket && onlineRoomId) {
+      onlineSocket.emit("new-game", { roomId: onlineRoomId });
+    }
     aiSearchIdRef.current += 1;
     stockfishRef.current?.postMessage("stop");
     setAiThinking(false);
@@ -619,6 +645,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setLastMove(null);
     setCaptureSquare(null);
     setPendingPromotion(null);
+    setOnlineGameOver(false);
   }
 
   return (
