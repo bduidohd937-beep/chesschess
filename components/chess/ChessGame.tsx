@@ -191,17 +191,25 @@ function Board({ game, selected, legalMoves, onSquare }: {
         const square = `${files[col]}${8-row}`;
         const light = (col + row) % 2 === 0;
         const isSelected = square === selected;
-        const isLegal = legalMoves.includes(square);
+        const legalMove = legalMoves.find((move) => move.to === square);
+        const isLegal = Boolean(legalMove);
+        const isCapture = Boolean(legalMove?.captured);
         return (
           <group key={square} position={[col - 3.5, 0, 3.5-row]}>
             <mesh receiveShadow onClick={(e) => { e.stopPropagation(); onSquare(square); }}>
               <boxGeometry args={[0.98, 0.18, 0.98]} />
               <meshStandardMaterial color={isSelected ? "#c9a227" : light ? "#e8d0a8" : "#765033"} roughness={0.45} />
             </mesh>
-            {isLegal && (
+            {isLegal && !isCapture && (
               <mesh position={[0, 0.12, 0]}>
                 <cylinderGeometry args={[0.13, 0.13, 0.04, 24]} />
                 <meshBasicMaterial color="#48d597" />
+              </mesh>
+            )}
+            {isCapture && (
+              <mesh position={[0, 0.13, 0]}>
+                <torusGeometry args={[0.29, 0.045, 12, 32]} />
+                <meshBasicMaterial color="#e85b5b" />
               </mesh>
             )}
           </group>
@@ -228,7 +236,10 @@ export default function ChessGame() {
     }
   }, [game, selected]);
 
-  const legalMoves = legalMoveObjects.map((move) => move.to);
+  const legalMoves = legalMoveObjects.map((move) => ({
+    to: move.to,
+    captured: move.captured,
+  }));
 
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
   const status = game.isCheckmate()
@@ -244,7 +255,7 @@ export default function ChessGame() {
   function handleSquare(square: Square) {
     const piece = game.get(square as any);
 
-    if (selected && legalMoves.includes(square)) {
+    if (selected && legalMoves.some((move) => move.to === square)) {
       const nextGame = new Chess(game.fen());
       try {
         nextGame.move({
