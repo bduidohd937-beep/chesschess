@@ -323,3 +323,91 @@ h1 {
 .online-divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:#665c50;font-size:10px}.online-divider:before,.online-divider:after{content:"";height:1px;background:#2b261f;flex:1}
 .join-row{display:grid;grid-template-columns:1fr auto;gap:8px}.join-row input{min-width:0;border:1px solid #393127;border-radius:8px;background:#0b0a09;color:#eee3cf;padding:13px 14px;font-size:18px;letter-spacing:.16em;text-align:center;outline:none}.join-row input:focus{border-color:#806338}
 .online-status{text-align:center;margin-top:18px;color:#a99778;font-size:10px;letter-spacing:.12em;font-weight:800}.online-back{display:block;margin:22px auto 0;border:0;background:none;color:#777067;cursor:pointer;font-size:11px}
+
+
+.game-result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .68);
+  backdrop-filter: blur(7px);
+}
+
+.game-result-card {
+  width: min(520px, 100%);
+  padding: 38px 34px 32px;
+  text-align: center;
+  border: 1px solid #765b32;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(185,154,98,.14), transparent 46%),
+    linear-gradient(145deg, #191510, #0d0c0a);
+  box-shadow: 0 30px 100px rgba(0,0,0,.62);
+}
+
+.game-result-kicker {
+  color: #b99a62;
+  font-size: 10px;
+  letter-spacing: .24em;
+  font-weight: 800;
+}
+
+.game-result-title {
+  margin-top: 13px;
+  color: #f2e7d3;
+  font-family: Georgia, serif;
+  font-size: clamp(38px, 7vw, 58px);
+  line-height: .98;
+  letter-spacing: .03em;
+}
+
+.game-result-subtitle {
+  margin-top: 13px;
+  color: #968c7d;
+  font-size: 12px;
+  letter-spacing: .14em;
+  font-weight: 800;
+}
+
+.game-result-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.game-result-primary,
+.game-result-secondary {
+  min-width: 120px;
+  border-radius: 8px;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.game-result-primary {
+  border: 1px solid #a98232;
+  background: #241b0f;
+  color: #f0d99f;
+}
+
+.game-result-secondary {
+  border: 1px solid #493b2a;
+  background: #11100d;
+  color: #b9ae9d;
+}
+
+.game-result-primary:hover { background: #302313; }
+.game-result-secondary:hover { background: #1b1814; }
+
+@media (max-width: 600px) {
+  .game-result-card { padding: 32px 22px 26px; }
+  .game-result-actions { flex-direction: column; }
+  .game-result-primary, .game-result-secondary { width: 100%; }
+}
