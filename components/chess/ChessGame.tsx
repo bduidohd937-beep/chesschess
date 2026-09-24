@@ -918,12 +918,14 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             game.board().flat().filter((item) => item?.type === "n" && item.color === movingPiece.color).length === 1
           );
           const isS001Move = Boolean(
+            moveObject &&
+            moveObject.flags === "a" &&
             augmentMode &&
             augmentState &&
             hasAugment(augmentState, "S001") &&
             movingPiece?.type === "p" &&
-            Math.abs(Number(square[1]) - Number(selected[1])) === 2 &&
-            square[0] === selected[0]
+            square[0] === selected[0] &&
+            Number(square[1]) - Number(selected[1]) === (movingPiece.color === "w" ? 2 : -2)
           );
           const isS002Move = Boolean(
             augmentMode &&
