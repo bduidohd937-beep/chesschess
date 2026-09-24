@@ -307,12 +307,12 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
   captureSquare?: Square | null;
 }) {
   const pieces = useMemo(() => {
-    const result: { square:string; type:PieceSymbol; color:Color }[] = [];
+    const result: { square: Square; type: PieceSymbol; color: Color }[] = [];
     const board = game.board();
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
         const piece = board[row][col];
-        if (piece) result.push({ square: `${files[col]}${8-row}`, type:piece.type, color:piece.color });
+        if (piece) result.push({ square: `${files[col]}${8-row}` as Square, type: piece.type, color: piece.color });
       }
     }
     return result;
@@ -347,11 +347,11 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
       {Array.from({ length: 64 }, (_, i) => {
         const col = i % 8;
         const row = Math.floor(i / 8);
-        const square = `${files[col]}${8-row}`;
+        const square = `${files[col]}${8-row}` as Square;
         const light = (col + row) % 2 === 0;
         const isSelected = square === selected;
         const isLastMove = lastMove?.from === square || lastMove?.to === square;
-        const boardPiece = game.get(square as any);
+        const boardPiece = game.get(square);
         const isCheckedKing =
           Boolean(boardPiece && boardPiece.type === "k" && boardPiece.color === game.turn() && game.isCheck());
         const legalMove = legalMoves.find((move) => move.to === square);
