@@ -6,6 +6,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import type { Socket } from "socket.io-client";
+import type { AugmentGameState, AugmentId, AugmentSelection } from "@/components/augment/types";
+import { getAugmentDefinition } from "@/components/augment/AugmentManager";
 
 type PromotionPiece = "q" | "r" | "b" | "n";
 type AiLevel = "beginner" | "intermediate" | "advanced";
@@ -436,7 +438,7 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
   );
 }
 
-export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, onlinePlayerColor, onPieceCaptured, augmentMode }: { onBackToMenu?: () => void; onlineSocket?: Socket | null; onlineRoomId?: string; onlinePlayerColor?: "w" | "b"; onPieceCaptured?: (color: "w" | "b") => void; augmentMode?: boolean }) {
+export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, onlinePlayerColor, onPieceCaptured, augmentMode, augmentState, augmentSelection, onChooseAugment, onRerollAugment }: { onBackToMenu?: () => void; onlineSocket?: Socket | null; onlineRoomId?: string; onlinePlayerColor?: "w" | "b"; onPieceCaptured?: (color: "w" | "b") => void; augmentMode?: boolean; augmentState?: AugmentGameState; augmentSelection?: AugmentSelection | null; onChooseAugment?: (id: AugmentId) => void; onRerollAugment?: () => void }) {
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
@@ -610,6 +612,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           : `${turn} TO MOVE`;
 
   function handleSquare(square: Square) {
+    if (augmentSelection && !augmentSelection.selected) return;
     if (aiThinking || pendingPromotion || onlineGameOver) return;
     if (onlineSocket && game.turn() !== onlinePlayerColor) return;
     const piece = game.get(square as any);
@@ -681,12 +684,31 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setOnlineGameOver(false);
   }
 
+  const augmentOwned = augmentState?.ownedAugments
+    .map((id) => getAugmentDefinition(id))
+    .filter(Boolean) ?? [];
+  const augmentPhase = augmentSelection?.phase ?? null;
+
   return (
-    <main className="chess-app">
+    <main className={augmentMode ? "chess-app augment-chess-app" : "chess-app"}>
+      {augmentMode ? (
+        <div className="augment-gamebar">
+          <button onClick={onBackToMenu}>← MENU</button>
+          <div className="augment-gamebar-title">
+            <span>AUGMENT CHESS</span>
+            <b>{onlineSocket ? "ONLINE BATTLE" : "SOLO BATTLE"}</b>
+          </div>
+          <div className="augment-loss-counter">
+            <span>PIECES LOST</span>
+            <b>{augmentState?.piecesLost ?? 0} / 16</b>
+          </div>
+        </div>
+      ) : null}
+
       <header className="chess-header">
         <div>
-          <div className="eyebrow">{augmentMode ? "AUGMENT CHESS" : onlineSocket ? "ONLINE 1V1" : "3D CHESS"}</div>
-          <h1>{augmentMode ? "Augment Battlefield" : onlineSocket ? `Room ${onlineRoomId ?? ""}` : "Classic Chess"}</h1>
+          <div className="eyebrow">{onlineSocket ? "ONLINE 1V1" : "3D CHESS"}</div>
+          <h1>{onlineSocket ? `Room ${onlineRoomId ?? ""}` : "Classic Chess"}</h1>
         </div>
         <div className="status">
           <span className={game.turn() === "w" ? "turn-dot white" : "turn-dot black"} />
@@ -826,7 +848,64 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             <div className="next-item">♟ Real 3D Chess Pieces</div>
           </div>
         </aside>
-      </section>
+      {augmentMode && (
+        <aside className="augment-hud">
+          <section className="augment-hud-card augment-owned-panel">
+            <div className="augment-hud-kicker">YOUR AUGMENTS</div>
+            <div className="augment-owned-grid">
+              {augmentOwned.length === 0 ? (
+                <div className="augment-empty">NO AUGMENTS YET</div>
+              ) : (
+                augmentOwned.map((augment) => augment && (
+                  <div key={augment.id} className={`augment-mini-card tier-${augment.tier}`}>
+                    <div className="augment-mini-tier">{augment.tier.toUpperCase()}</div>
+                    <div className="augment-mini-name">{augment.name}</div>
+                    <div className="augment-mini-description">{augment.description}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+          <section className="augment-hud-card augment-battle-panel">
+            <div><span>ROUND PROGRESS</span><b>{augmentState?.piecesLost ?? 0} / 16 PIECES LOST</b></div>
+            <div className="augment-progress-bar"><i style={{ width: `${Math.min(100, ((augmentState?.piecesLost ?? 0) / 16) * 100)}%` }} /></div>
+            <div className="augment-hud-stats">
+              <span>REROLLS <b>{augmentState?.rerollsRemaining ?? 0}</b></span>
+              <span>AUGMENTS <b>{augmentOwned.length}</b></span>
+            </div>
+          </section>
+        </aside>
+      )}
+
+      {augmentSelection && !augmentSelection.selected && (
+        <div className="augment-select-overlay">
+          <div className="augment-select-backdrop" />
+          <div className="augment-select-panel">
+            <div className="augment-select-kicker">AUGMENT CHOICE · {augmentPhase === "start" ? "BATTLE START" : augmentPhase === "losses_8" ? "8 PIECES LOST" : "16 PIECES LOST"}</div>
+            <h2>CHOOSE YOUR POWER</h2>
+            <p>One choice changes the rules of this battle.</p>
+            <div className="augment-choice-grid">
+              {augmentSelection.options.map((id) => {
+                const augment = getAugmentDefinition(id);
+                if (!augment) return null;
+                return (
+                  <button key={id} className={`augment-choice-card tier-${augment.tier}`} onClick={() => onChooseAugment?.(id)}>
+                    <div className="augment-choice-tier">{augment.tier === "transcendent" ? "✦ TRANSCENDENT" : `${augment.tier.toUpperCase()} · ${augment.category.toUpperCase()}`}</div>
+                    <h3>{augment.name}</h3>
+                    <p>{augment.description}</p>
+                    <span>SELECT →</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="augment-reroll-row">
+              <span>REROLLS REMAINING <b>{augmentState?.rerollsRemaining ?? 0}</b></span>
+              <button onClick={onRerollAugment} disabled={(augmentState?.rerollsRemaining ?? 0) <= 0}>REROLL</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isGameOver && !pendingPromotion && (
         <div className="game-result-overlay">
           <div className="game-result-card">
