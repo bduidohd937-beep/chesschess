@@ -24,7 +24,7 @@ function pieceLabel(piece: PieceSymbol, color: Color) {
   return symbols[color][piece];
 }
 
-function Piece({ type, color, square, selected, onClick }: {
+function Piece({ type, color, square, selected, onClick, animateFrom }: {
   type: PieceSymbol;
   color: Color;
   square: Square;
