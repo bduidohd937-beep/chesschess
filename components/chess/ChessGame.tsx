@@ -274,7 +274,7 @@ function Piece({ type, color, square, selected, onClick }: {
     </group>
   );
 }
-function Board({ game, selected, legalMoves, onSquare }: {
+function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }: {
   game: Chess;
   selected: Square | null;
   legalMoves: { to: Square; captured?: PieceSymbol; flags: string }[];
