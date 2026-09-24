@@ -33,147 +33,232 @@ function Piece({ type, color, square, selected, onClick }: {
 }) {
   const [x, , z] = squarePosition(square);
   const white = color === "w";
-  const main = selected ? "#d7b65d" : white ? "#f4efe2" : "#211d1a";
-  const edge = selected ? "#f0d477" : white ? "#d9d0bf" : "#0e0c0b";
-  const material = { color: main, metalness: 0.1, roughness: 0.22 } as const;
-  const accent = { color: edge, metalness: 0.16, roughness: 0.2 } as const;
+
+  const main = selected ? "#d9b84c" : white ? "#eee9dc" : "#171412";
+  const edge = selected ? "#ffe38a" : white ? "#b9b09f" : "#050403";
+
+  const material = {
+    color: main,
+    metalness: white ? 0.28 : 0.42,
+    roughness: white ? 0.2 : 0.26,
+  } as const;
+
+  const accent = {
+    color: edge,
+    metalness: white ? 0.34 : 0.5,
+    roughness: 0.18,
+  } as const;
+
+  const gold = {
+    color: selected ? "#ffe28a" : "#a98232",
+    metalness: 0.72,
+    roughness: 0.18,
+  } as const;
 
   return (
-    <group position={[x, selected ? 0.18 : 0.1, z]} onClick={(e) => { e.stopPropagation(); onClick(); }}>
-      <mesh castShadow position={[0, 0.08, 0]}>
-        <cylinderGeometry args={[0.36, 0.43, 0.16, 40]} />
+    <group
+      position={[x, selected ? 0.18 : 0.1, z]}
+      scale={selected ? 1.04 : 1}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      {/* 공통 Staunton 스타일 받침 */}
+      <mesh castShadow receiveShadow position={[0, 0.055, 0]}>
+        <cylinderGeometry args={[0.41, 0.48, 0.11, 48]} />
         <meshStandardMaterial {...accent} />
       </mesh>
+      <mesh castShadow receiveShadow position={[0, 0.13, 0]}>
+        <cylinderGeometry args={[0.33, 0.39, 0.08, 48]} />
+        <meshStandardMaterial {...material} />
+      </mesh>
 
-      {type === "p" && <>
-        <mesh castShadow position={[0, 0.42, 0]}>
-          <latheGeometry args={[[
-            new THREE.Vector2(0.18, 0),
-            new THREE.Vector2(0.25, 0.12),
-            new THREE.Vector2(0.2, 0.28),
-            new THREE.Vector2(0.14, 0.52),
-            new THREE.Vector2(0.22, 0.58),
-          ], 32]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 0.86, 0]}>
-          <sphereGeometry args={[0.21, 32, 20]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-      </>}
-
-      {type === "r" && <>
-        <mesh castShadow position={[0, 0.45, 0]}>
-          <cylinderGeometry args={[0.25, 0.31, 0.62, 32]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 0.82, 0]}>
-          <cylinderGeometry args={[0.35, 0.29, 0.18, 12]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-        {[-0.2, 0, 0.2].map((dx) => (
-          <mesh key={dx} castShadow position={[dx, 0.98, 0]}>
-            <boxGeometry args={[0.11, 0.2, 0.25]} />
+      {/* PAWN */}
+      {type === "p" && (
+        <>
+          <mesh castShadow receiveShadow position={[0, 0.38, 0]}>
+            <latheGeometry args={[[
+              new THREE.Vector2(0.15, 0),
+              new THREE.Vector2(0.23, 0.08),
+              new THREE.Vector2(0.2, 0.17),
+              new THREE.Vector2(0.13, 0.25),
+              new THREE.Vector2(0.12, 0.43),
+              new THREE.Vector2(0.18, 0.5),
+            ], 40]} />
             <meshStandardMaterial {...material} />
           </mesh>
-        ))}
-      </>}
+          <mesh castShadow position={[0, 0.82, 0]}>
+            <sphereGeometry args={[0.22, 36, 24]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+        </>
+      )}
 
-      {type === "n" && <>
-        <mesh castShadow position={[0, 0.43, 0]}>
-          <cylinderGeometry args={[0.25, 0.34, 0.56, 20]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 0.82, 0]} rotation={[0, 0, -0.18]}>
-          <coneGeometry args={[0.28, 0.48, 6]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 0.91, 0.02]}>
-          <torusGeometry args={[0.16, 0.035, 10, 20, Math.PI * 1.35]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-        <mesh castShadow position={[0.02, 0.98, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
-          <boxGeometry args={[0.08, 0.08, 0.48]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-      </>}
-
-      {type === "b" && <>
-        <mesh castShadow position={[0, 0.48, 0]}>
-          <coneGeometry args={[0.31, 0.76, 24]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 0.91, 0]}>
-          <sphereGeometry args={[0.18, 28, 18]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-        <mesh castShadow position={[0, 0.93, 0]} rotation={[0.2, 0, 0.2]}>
-          <boxGeometry args={[0.07, 0.34, 0.08]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 1.02, 0]}>
-          <torusGeometry args={[0.18, 0.025, 8, 24]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-      </>}
-
-      {type === "q" && <>
-        <mesh castShadow position={[0, 0.48, 0]}>
-          <latheGeometry args={[[
-            new THREE.Vector2(0.18, 0),
-            new THREE.Vector2(0.3, 0.18),
-            new THREE.Vector2(0.24, 0.5),
-            new THREE.Vector2(0.3, 0.7),
-          ], 32]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 0.91, 0]}>
-          <cylinderGeometry args={[0.23, 0.27, 0.16, 32]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-        {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((a) => (
-          <mesh key={a} castShadow position={[Math.cos(a) * 0.18, 1.08, Math.sin(a) * 0.18]}>
-            <sphereGeometry args={[0.09, 16, 12]} />
+      {/* ROOK */}
+      {type === "r" && (
+        <>
+          <mesh castShadow receiveShadow position={[0, 0.45, 0]}>
+            <latheGeometry args={[[
+              new THREE.Vector2(0.2, 0),
+              new THREE.Vector2(0.27, 0.08),
+              new THREE.Vector2(0.22, 0.2),
+              new THREE.Vector2(0.27, 0.27),
+              new THREE.Vector2(0.23, 0.62),
+              new THREE.Vector2(0.31, 0.69),
+            ], 40]} />
             <meshStandardMaterial {...material} />
           </mesh>
-        ))}
-        <mesh castShadow position={[0, 1.08, 0]}>
-          <sphereGeometry args={[0.13, 20, 16]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-      </>}
+          <mesh castShadow position={[0, 0.84, 0]}>
+            <cylinderGeometry args={[0.34, 0.3, 0.16, 12]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+          {[-0.21, 0, 0.21].map((dx) => (
+            <mesh key={dx} castShadow position={[dx, 0.98, 0]}>
+              <boxGeometry args={[0.13, 0.19, 0.25]} />
+              <meshStandardMaterial {...material} />
+            </mesh>
+          ))}
+          {[-0.21, 0, 0.21].map((dz) => (
+            <mesh key={dz} castShadow position={[0, 0.98, dz]}>
+              <boxGeometry args={[0.25, 0.19, 0.13]} />
+              <meshStandardMaterial {...material} />
+            </mesh>
+          ))}
+        </>
+      )}
 
-      {type === "k" && <>
-        <mesh castShadow position={[0, 0.5, 0]}>
-          <latheGeometry args={[[
-            new THREE.Vector2(0.2, 0),
-            new THREE.Vector2(0.32, 0.18),
-            new THREE.Vector2(0.25, 0.52),
-            new THREE.Vector2(0.31, 0.7),
-          ], 32]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 0.82, 0]}>
-          <cylinderGeometry args={[0.26, 0.29, 0.2, 32]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-        <mesh castShadow position={[0, 1.04, 0]}>
-          <boxGeometry args={[0.14, 0.46, 0.14]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 1.04, 0]}>
-          <boxGeometry args={[0.46, 0.14, 0.14]} />
-          <meshStandardMaterial {...material} />
-        </mesh>
-        <mesh castShadow position={[0, 1.29, 0]}>
-          <sphereGeometry args={[0.07, 16, 12]} />
-          <meshStandardMaterial {...accent} />
-        </mesh>
-      </>}
+      {/* KNIGHT — 말 머리 실루엣을 단순화한 형태 */}
+      {type === "n" && (
+        <>
+          <mesh castShadow receiveShadow position={[0, 0.46, 0]}>
+            <latheGeometry args={[[
+              new THREE.Vector2(0.18, 0),
+              new THREE.Vector2(0.29, 0.1),
+              new THREE.Vector2(0.23, 0.22),
+              new THREE.Vector2(0.25, 0.58),
+              new THREE.Vector2(0.31, 0.66),
+            ], 40]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+          <mesh castShadow position={[0, 0.86, 0]} rotation={[0, 0, -0.18]}>
+            <coneGeometry args={[0.28, 0.5, 6]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+          <mesh castShadow position={[0.01, 1.08, 0.07]} rotation={[0.35, 0, -0.12]}>
+            <boxGeometry args={[0.18, 0.34, 0.48]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+          <mesh castShadow position={[0.01, 1.23, 0.14]}>
+            <coneGeometry args={[0.11, 0.23, 5]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+          <mesh position={[0.045, 1.13, 0.285]}>
+            <sphereGeometry args={[0.035, 16, 12]} />
+            <meshStandardMaterial {...gold} />
+          </mesh>
+        </>
+      )}
+
+      {/* BISHOP */}
+      {type === "b" && (
+        <>
+          <mesh castShadow receiveShadow position={[0, 0.49, 0]}>
+            <latheGeometry args={[[
+              new THREE.Vector2(0.17, 0),
+              new THREE.Vector2(0.28, 0.12),
+              new THREE.Vector2(0.21, 0.25),
+              new THREE.Vector2(0.18, 0.55),
+              new THREE.Vector2(0.27, 0.7),
+            ], 40]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+          <mesh castShadow position={[0, 0.92, 0]}>
+            <sphereGeometry args={[0.17, 28, 18]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+          <mesh castShadow position={[0, 0.95, 0]} rotation={[0.2, 0, 0.2]}>
+            <boxGeometry args={[0.065, 0.4, 0.09]} />
+            <meshStandardMaterial {...gold} />
+          </mesh>
+          <mesh castShadow position={[0, 1.08, 0]}>
+            <torusGeometry args={[0.16, 0.025, 10, 28]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+        </>
+      )}
+
+      {/* QUEEN */}
+      {type === "q" && (
+        <>
+          <mesh castShadow receiveShadow position={[0, 0.5, 0]}>
+            <latheGeometry args={[[
+              new THREE.Vector2(0.18, 0),
+              new THREE.Vector2(0.3, 0.12),
+              new THREE.Vector2(0.22, 0.29),
+              new THREE.Vector2(0.2, 0.58),
+              new THREE.Vector2(0.3, 0.72),
+            ], 40]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+          <mesh castShadow position={[0, 0.93, 0]}>
+            <cylinderGeometry args={[0.28, 0.3, 0.14, 40]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+          {[0, 1, 2, 3, 4].map((i) => {
+            const a = (i / 5) * Math.PI * 2;
+            return (
+              <mesh
+                key={i}
+                castShadow
+                position={[Math.cos(a) * 0.18, 1.09, Math.sin(a) * 0.18]}
+              >
+                <sphereGeometry args={[0.085, 20, 14]} />
+                <meshStandardMaterial {...gold} />
+              </mesh>
+            );
+          })}
+          <mesh castShadow position={[0, 1.1, 0]}>
+            <sphereGeometry args={[0.13, 24, 18]} />
+            <meshStandardMaterial {...gold} />
+          </mesh>
+        </>
+      )}
+
+      {/* KING */}
+      {type === "k" && (
+        <>
+          <mesh castShadow receiveShadow position={[0, 0.51, 0]}>
+            <latheGeometry args={[[
+              new THREE.Vector2(0.19, 0),
+              new THREE.Vector2(0.32, 0.13),
+              new THREE.Vector2(0.24, 0.31),
+              new THREE.Vector2(0.22, 0.6),
+              new THREE.Vector2(0.31, 0.73),
+            ], 40]} />
+            <meshStandardMaterial {...material} />
+          </mesh>
+          <mesh castShadow position={[0, 0.91, 0]}>
+            <cylinderGeometry args={[0.28, 0.31, 0.16, 40]} />
+            <meshStandardMaterial {...accent} />
+          </mesh>
+          <mesh castShadow position={[0, 1.14, 0]}>
+            <boxGeometry args={[0.13, 0.45, 0.13]} />
+            <meshStandardMaterial {...gold} />
+          </mesh>
+          <mesh castShadow position={[0, 1.14, 0]}>
+            <boxGeometry args={[0.44, 0.13, 0.13]} />
+            <meshStandardMaterial {...gold} />
+          </mesh>
+          <mesh castShadow position={[0, 1.38, 0]}>
+            <sphereGeometry args={[0.065, 20, 14]} />
+            <meshStandardMaterial {...gold} />
+          </mesh>
+        </>
+      )}
     </group>
   );
 }
-
 function Board({ game, selected, legalMoves, onSquare }: {
   game: Chess;
   selected: Square | null;
@@ -194,13 +279,13 @@ function Board({ game, selected, legalMoves, onSquare }: {
 
   return (
     <group rotation={[0, 0, 0]}>
-      <mesh position={[0, -0.16, 0]} receiveShadow>
-        <boxGeometry args={[8.7, 0.3, 8.7]} />
-        <meshStandardMaterial color="#0d0d0d" roughness={0.32} metalness={0.04} />
+      <mesh position={[0, -0.2, 0]} receiveShadow>
+        <boxGeometry args={[8.9, 0.38, 8.9]} />
+        <meshStandardMaterial color="#090807" roughness={0.24} metalness={0.32} />
       </mesh>
-      <mesh position={[0, -0.01, 0]} receiveShadow>
-        <boxGeometry args={[8.45, 0.04, 8.45]} />
-        <meshStandardMaterial color="#f2f2f2" roughness={0.4} />
+      <mesh position={[0, -0.005, 0]} receiveShadow>
+        <boxGeometry args={[8.48, 0.07, 8.48]} />
+        <meshStandardMaterial color="#c7b08a" roughness={0.3} metalness={0.08} />
       </mesh>
       {Array.from({ length: 64 }, (_, i) => {
         const col = i % 8;
@@ -209,7 +294,11 @@ function Board({ game, selected, legalMoves, onSquare }: {
         return (
           <mesh key={`floor-${i}`} position={[col - 3.5, 0.015, 3.5 - row]} receiveShadow>
             <boxGeometry args={[0.98, 0.025, 0.98]} />
-            <meshStandardMaterial color={light ? "#f2f2f2" : "#171717"} roughness={0.42} />
+            <meshStandardMaterial
+              color={light ? "#e6d1a8" : "#51331f"}
+              roughness={0.3}
+              metalness={0.06}
+            />
           </mesh>
         );
       })}
@@ -231,7 +320,11 @@ function Board({ game, selected, legalMoves, onSquare }: {
           <group key={square} position={[col - 3.5, 0, 3.5-row]}>
             <mesh receiveShadow onClick={(e) => { e.stopPropagation(); onSquare(square); }}>
               <boxGeometry args={[0.98, 0.18, 0.98]} />
-              <meshStandardMaterial color={isSelected ? "#c9a227" : light ? "#e8d0a8" : "#765033"} roughness={0.45} />
+              <meshStandardMaterial
+                color={isSelected ? "#c9a227" : light ? "#e8d0a8" : "#765033"}
+                roughness={0.28}
+                metalness={0.08}
+              />
             </mesh>
             {isLegal && !isCapture && (
               <mesh position={[0, 0.12, 0]}>
@@ -334,13 +427,30 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
 
       <section className="chess-layout">
         <div className="board-shell">
-          <Canvas shadows camera={{ position: [0, 7.8, -8.2], fov: 42 }}>
-            <color attach="background" args={["#10100f"]} />
-            <ambientLight intensity={1.7} />
-            <directionalLight castShadow position={[4, 9, 5]} intensity={3.2} shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
+          <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 8.8, -9.6], fov: 40 }}>
+            <color attach="background" args={["#0b0a09"]} />
+            <ambientLight intensity={1.25} />
+            <hemisphereLight args={["#fff7e8", "#24170e", 1.15]} />
+            <directionalLight
+              castShadow
+              position={[4, 10, -5]}
+              intensity={3.6}
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
+              shadow-bias={-0.00015}
+            />
             <Environment preset="studio" />
             <Board game={game} selected={selected} legalMoves={legalMoves} onSquare={handleSquare} />
-            <OrbitControls enablePan={false} minDistance={6} maxDistance={13} minPolarAngle={0.45} maxPolarAngle={1.35} />
+            <OrbitControls
+              enablePan={false}
+              enableDamping
+              dampingFactor={0.08}
+              minDistance={6.8}
+              maxDistance={13}
+              minPolarAngle={0.48}
+              maxPolarAngle={1.3}
+              target={[0, 0, 0]}
+            />
           </Canvas>
         </div>
 
