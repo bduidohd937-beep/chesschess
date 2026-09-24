@@ -34,11 +34,12 @@ function pieceLabel(piece: PieceSymbol, color: Color) {
   return symbols[color][piece];
 }
 
-function Piece({ type, color, square, selected, onClick, animateFrom }: {
+function Piece({ type, color, square, selected, augmentGlow, onClick, animateFrom }: {
   type: PieceSymbol;
   color: Color;
   square: Square;
   selected: boolean;
+  augmentGlow?: boolean;
   onClick: () => void;
   animateFrom?: Square;
 }) {
@@ -99,13 +100,15 @@ function Piece({ type, color, square, selected, onClick, animateFrom }: {
     <group
       ref={groupRef}
       position={[x, selected ? 0.18 : 0.1, z]}
-      scale={selected ? 1.04 : 1}
+      scale={augmentGlow ? 1.055 : selected ? 1.04 : 1}
       onClick={(e) => {
         e.stopPropagation();
         onClick();
       }}
     >
-      {/* 공통 Staunton 스타일 받침 */}
+      {augmentGlow && <pointLight color="#d7a4ff" intensity={2.2} distance={2.2} />}
+      {augmentGlow && <mesh raycast={() => null} position={[0, 0.16, 0]}><torusGeometry args={[0.43, 0.045, 12, 40]} /><meshBasicMaterial color="#d98cff" transparent opacity={0.9} /></mesh>}
+      {/* 공통 Staunton 스타일 받침 */
       <mesh castShadow receiveShadow position={[0, 0.055, 0]}>
         <cylinderGeometry args={[0.41, 0.48, 0.11, 48]} />
         <meshStandardMaterial {...accent} />
@@ -387,13 +390,14 @@ function makeCustomMove(game: Chess, from: Square, to: Square, promotion?: Promo
   }
 }
 
-function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }: {
+function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare, augmentGlowSquares }: {
   game: Chess;
   selected: Square | null;
   legalMoves: { to: Square; captured?: PieceSymbol; flags: string }[];
   onSquare: (square: Square) => void;
   lastMove: { from: Square; to: Square } | null;
   captureSquare?: Square | null;
+  augmentGlowSquares?: Set<Square>;
 }) {
   const pieces = useMemo(() => {
     const result: { square: Square; type: PieceSymbol; color: Color }[] = [];
@@ -524,6 +528,7 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare }
           key={piece.square}
           {...piece}
           selected={piece.square === selected}
+          augmentGlow={augmentGlowSquares?.has(piece.square)}
           animateFrom={lastMove?.to === piece.square ? lastMove.from : undefined}
           onClick={() => onSquare(piece.square)}
         />
@@ -625,12 +630,13 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
 
   useEffect(() => {
     if (!onlineSocket) return;
-    const onOpponentMove = ({ fen, from, to }: { fen: string; from?: Square; to?: Square }) => {
+    const onOpponentMove = ({ fen, from, to, captured }: { fen: string; from?: Square; to?: Square; captured?: boolean }) => {
       setGame(new Chess(fen));
       setSelected(null);
       setLastMove(from && to ? { from, to } : null);
       setCaptureSquare(null);
       setPendingPromotion(null);
+      if (captured) onPieceCaptured?.(onlinePlayerColor ?? "w");
       setOnlineGameOver(new Chess(fen).isGameOver());
     };
     const onGameReset = ({ fen }: { fen: string }) => {
@@ -656,7 +662,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       onlineSocket.off("game-reset", onGameReset);
       onlineSocket.off("opponent-disconnected", onOpponentDisconnected);
     };
-  }, [onlineSocket]);
+  }, [onlineSocket, onPieceCaptured, onlinePlayerColor]);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
@@ -880,7 +886,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         const moveObject = effectiveLegalMoveObjects.find((move) => move.to === square);
         const isSniperMove = Boolean(moveObject && moveObject.flags === "g");
         if (isSniperMove) {
-          if (onlineSocket || g001Uses <= 0) {
+          if (g001Uses <= 0) {
             setSelected(null);
             return;
           }
@@ -894,6 +900,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           onPieceCaptured?.(movingPiece?.color ?? game.turn());
           setLastMove({ from: selected, to: selected });
           setCaptureSquare(square);
+          if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square, custom: true, augment: "G001" });
           setSelected(null);
           return;
         }
@@ -1014,6 +1021,20 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setOnlineGameOver(false);
   }
 
+  const g002Active = Boolean(augmentMode && augmentState && hasAugment(augmentState, "G002") && game.board().flat().filter((item) => item?.type === "n" && item.color === (onlinePlayerColor ?? game.turn())).length === 1);
+  const augmentGlowSquares = useMemo(() => {
+    const result = new Set<Square>();
+    if (g002Active) {
+      const color = onlinePlayerColor ?? game.turn();
+      const board = game.board();
+      for (let row = 0; row < 8; row += 1) for (let col = 0; col < 8; col += 1) {
+        const item = board[row][col];
+        if (item?.type === "n" && item.color === color) result.add(String.fromCharCode(97 + col) + (8 - row) as Square);
+      }
+    }
+    return result;
+  }, [g002Active, game, onlinePlayerColor]);
+
   const augmentOwned = augmentState?.ownedAugments
     .map((id) => getAugmentDefinition(id))
     .filter(Boolean) ?? [];
@@ -1067,6 +1088,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
               legalMoves={legalMoves}
               lastMove={lastMove}
               captureSquare={captureSquare}
+              augmentGlowSquares={augmentGlowSquares}
               onSquare={handleSquare}
             />
             <OrbitControls
