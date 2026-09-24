@@ -19,12 +19,6 @@ const phases: Exclude<AugmentSelectionPhase, "complete">[] = [
   "losses_16",
 ];
 
-function phaseReached(piecesLost: number): Exclude<AugmentSelectionPhase, "complete"> | null {
-  if (piecesLost >= SECOND_LOSS_TRIGGER) return "losses_16";
-  if (piecesLost >= FIRST_LOSS_TRIGGER) return "losses_8";
-  return null;
-}
-
 function weightedTier(): AugmentTier {
   const entries = Object.entries(AUGMENT_TIER_WEIGHTS) as [AugmentTier, number][];
   const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
@@ -46,11 +40,10 @@ function drawOne(tier: AugmentTier, excluded: Set<AugmentId>): AugmentId | null 
   return candidates[Math.floor(Math.random() * candidates.length)].id;
 }
 
-function drawOptions(excluded: Set<AugmentId>, forcedTiers?: AugmentTier[]): AugmentId[] {
+function drawOptions(excluded: Set<AugmentId>, tier: AugmentTier): AugmentId[] {
   const result: AugmentId[] = [];
 
   for (let index = 0; index < AUGMENT_OPTION_COUNT; index += 1) {
-    const tier = forcedTiers?.[index] ?? weightedTier();
     const picked = drawOne(tier, excluded);
 
     if (picked) {
@@ -59,22 +52,42 @@ function drawOptions(excluded: Set<AugmentId>, forcedTiers?: AugmentTier[]): Aug
       continue;
     }
 
-    const fallback = AUGMENTS.filter((augment) => !excluded.has(augment.id));
-    if (fallback.length === 0) break;
+    // If a tier runs out of unused augments, keep the tier rule by allowing
+    // an already-seen card as the final fallback.
+    const tierCandidates = AUGMENTS.filter((augment) => augment.tier === tier);
+    if (tierCandidates.length === 0) break;
 
-    const random = fallback[Math.floor(Math.random() * fallback.length)];
-    result.push(random.id);
-    excluded.add(random.id);
+    const fallback = tierCandidates[Math.floor(Math.random() * tierCandidates.length)];
+    result.push(fallback.id);
+    excluded.add(fallback.id);
   }
 
   return result;
 }
 
-export function createAugmentGameState(startTiers?: AugmentTier[]): AugmentGameState {
-  const selection = createSelection("start", [], [], startTiers);
+function tierForPhase(
+  phase: Exclude<AugmentSelectionPhase, "complete">,
+  selectionTiers: AugmentTier[],
+): AugmentTier {
+  const index = phases.indexOf(phase);
+  return selectionTiers[index] ?? weightedTier();
+}
+
+export function createAugmentGameState(
+  selectionTiers?: AugmentTier[],
+): AugmentGameState {
+  const sharedTiers = [
+    selectionTiers?.[0] ?? weightedTier(),
+    selectionTiers?.[1] ?? weightedTier(),
+    selectionTiers?.[2] ?? weightedTier(),
+  ];
+
+  const selection = createSelection("start", [], [], sharedTiers[0]);
+
   return {
     piecesLost: 0,
     rerollsRemaining: INITIAL_REROLLS,
+    selectionTiers: sharedTiers,
     ownedAugments: [],
     selections: [selection],
     nextSelection: "start",
@@ -85,12 +98,12 @@ function createSelection(
   phase: Exclude<AugmentSelectionPhase, "complete">,
   ownedAugments: AugmentId[],
   previousOptions: AugmentId[],
-  forcedTiers?: AugmentTier[],
+  tier: AugmentTier,
 ): AugmentSelection {
   const excluded = new Set([...ownedAugments, ...previousOptions]);
   return {
     phase,
-    options: drawOptions(excluded, forcedTiers),
+    options: drawOptions(excluded, tier),
     selected: null,
     rerollsUsed: 0,
   };
@@ -101,14 +114,15 @@ export function getCurrentSelection(state: AugmentGameState) {
 }
 
 /**
- * Rerolls exactly one card.
- * The replacement keeps the original card's tier and consumes one shared reroll.
+ * Reroll exactly one card. The replacement always has the same tier.
+ * The other two cards remain untouched and one shared reroll is consumed.
  */
 export function rerollCurrentSelection(
   state: AugmentGameState,
   optionIndex: number,
 ): AugmentGameState {
   const current = getCurrentSelection(state);
+
   if (
     !current ||
     current.selected ||
@@ -162,9 +176,10 @@ export function chooseAugment(
     { ...current, selected: augmentId },
   ];
 
-  const nextPhase = phases[current.phase === "start" ? 1 : current.phase === "losses_8" ? 2 : 3];
+  const nextPhaseIndex = phases.indexOf(current.phase) + 1;
+  const nextPhase = phases[nextPhaseIndex];
 
-  if (nextPhase === undefined) {
+  if (!nextPhase) {
     return {
       ...state,
       ownedAugments,
@@ -205,6 +220,7 @@ export function recordPiecesLost(
     reached,
     [...state.ownedAugments],
     state.selections.flatMap((item) => item.options),
+    tierForPhase(reached, state.selectionTiers),
   );
 
   return {
@@ -213,6 +229,12 @@ export function recordPiecesLost(
     selections: [...state.selections, selection],
     nextSelection: reached,
   };
+}
+
+function phaseReached(piecesLost: number): Exclude<AugmentSelectionPhase, "complete"> | null {
+  if (piecesLost >= SECOND_LOSS_TRIGGER) return "losses_16";
+  if (piecesLost >= FIRST_LOSS_TRIGGER) return "losses_8";
+  return null;
 }
 
 export function getAugmentDefinition(id: AugmentId): AugmentDefinition | undefined {
