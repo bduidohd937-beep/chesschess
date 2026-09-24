@@ -98,6 +98,64 @@ io.on("connection",socket=>{
     if(!kingSquare||customGame.isAttacked(kingSquare,moving.color==="w"?"b":"w")) throw new Error("KING IN CHECK");
     room.game=customGame;
     move={from,to,promotion:null};
+if(custom === true && (augment === "G002" || augment === "S001")){
+    const moving=room.game.get(from);
+    const target=room.game.get(to);
+    if(!moving||target?.color===moving.color) throw new Error("INVALID CUSTOM MOVE");
+
+    if(augment === "S001"){
+     if(moving.type!=="p") throw new Error("INVALID S001 MOVE");
+     const direction=moving.color==="w"?1:-1;
+     const fileDiff=to.charCodeAt(0)-from.charCodeAt(0);
+     const rankDiff=Number(to[1])-Number(from[1]);
+     if(fileDiff!==0||rankDiff!==direction*2) throw new Error("INVALID S001 MOVE");
+     const middle=from[0]+(Number(from[1])+direction);
+     if(room.game.get(middle)||target) throw new Error("BLOCKED S001 MOVE");
+     const startRank=moving.color==="w"?2:7;
+     if(Number(from[1])!==startRank) throw new Error("INVALID S001 MOVE");
+     const next=new Chess(room.game.fen());
+     next.remove(from);
+     next.put({type:"p",color:moving.color},to);
+     const fenParts=next.fen().split(" ");
+     fenParts[1]=moving.color==="w"?"b":"w";
+     fenParts[3]=to[0]+(Number(to[1])+(moving.color==="w"?-1:1));
+     fenParts[4]="0";
+     if(moving.color==="b") fenParts[5]=String(Number(fenParts[5])+1);
+     const customGame=new Chess(fenParts.join(" "));
+     let kingSquare=null;
+     const board=customGame.board();
+     for(let row=0;row<8;row++) for(let col=0;col<8;col++) if(board[row][col]?.type==="k"&&board[row][col]?.color===moving.color) kingSquare=String.fromCharCode(97+col)+(8-row);
+     if(!kingSquare||customGame.isAttacked(kingSquare,moving.color==="w"?"b":"w")) throw new Error("KING IN CHECK");
+     room.game=customGame;
+     move={from,to,promotion:null};
+    }else{
+     const knightCount=room.game.board().flat().filter(p=>p?.type==="n"&&p.color===socket.data.color).length;
+     if(!moving||moving.type!=="n"||moving.color!==socket.data.color||knightCount!==1) throw new Error("INVALID G002 MOVE");
+     const df=Math.abs(to.charCodeAt(0)-from.charCodeAt(0));
+     const dr=Math.abs(Number(to[1])-Number(from[1]));
+     if(!((df===0&&dr>0)||(dr===0&&df>0)||(df===dr&&df>0))) throw new Error("INVALID G002 MOVE");
+     const fileStep=Math.sign(to.charCodeAt(0)-from.charCodeAt(0));
+     const rankStep=Math.sign(Number(to[1])-Number(from[1]));
+     let f=from.charCodeAt(0)+fileStep;
+     let r=Number(from[1])+rankStep;
+     while(f!==to.charCodeAt(0)||r!==Number(to[1])){
+      if(room.game.get(String.fromCharCode(f)+r)) throw new Error("BLOCKED G002 MOVE");
+      f+=fileStep;r+=rankStep;
+     }
+     const next=new Chess(room.game.fen());
+     next.remove(from); if(target) next.remove(to);
+     next.put({type:"n",color:moving.color},to);
+     const fenParts=next.fen().split(" ");
+     fenParts[1]=moving.color==="w"?"b":"w"; fenParts[3]="-"; fenParts[4]="0";
+     if(moving.color==="b") fenParts[5]=String(Number(fenParts[5])+1);
+     const customGame=new Chess(fenParts.join(" "));
+     let kingSquare=null;
+     const board=customGame.board();
+     for(let row=0;row<8;row++) for(let col=0;col<8;col++) if(board[row][col]?.type==="k"&&board[row][col]?.color===moving.color) kingSquare=String.fromCharCode(97+col)+(8-row);
+     if(!kingSquare||customGame.isAttacked(kingSquare,moving.color==="w"?"b":"w")) throw new Error("KING IN CHECK");
+     room.game=customGame;
+     move={from,to,promotion:null};
+    }
    }else{
     move=room.game.move({from,to,promotion});
    }
