@@ -478,7 +478,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   }, []);
 
   useEffect(() => {
-    if (!aiEnabled || game.turn() !== "b" || game.isGameOver() || pendingPromotion || !engineReadyRef.current || aiThinking) return;
+    if (!aiEnabled || game.turn() !== "b" || game.isGameOver() || pendingPromotion || !engineReadyRef.current) return;
     const worker = stockfishRef.current;
     if (!worker) return;
     const level = AI_LEVELS[aiLevel];
@@ -492,7 +492,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
     return () => {
       if (searchId === aiSearchIdRef.current) worker.postMessage("stop");
     };
-  }, [aiEnabled, aiLevel, game, pendingPromotion, aiThinking]);
+  }, [aiEnabled, aiLevel, game, pendingPromotion]);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
