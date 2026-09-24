@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Chess, type Color, type PieceSymbol } from "chess.js";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -30,9 +30,23 @@ function Piece({ type, color, square, selected, onClick }: {
   square: Square;
   selected: boolean;
   onClick: () => void;
+  animateFrom?: Square;
 }) {
+  const groupRef = useRef<THREE.Group>(null);
   const [x, , z] = squarePosition(square);
   const white = color === "w";
+
+  const animationStart = animateFrom ? squarePosition(animateFrom) : null;
+  const animationElapsed = useRef(animateFrom ? 0 : 1);
+  useFrame((_, delta) => {
+    if (!groupRef.current || !animationStart || animationElapsed.current >= 1) return;
+    animationElapsed.current = Math.min(1, animationElapsed.current + delta / 0.22);
+    const t = animationElapsed.current;
+    const eased = 1 - Math.pow(1 - t, 3);
+    groupRef.current.position.x = THREE.MathUtils.lerp(animationStart[0], x, eased);
+    groupRef.current.position.z = THREE.MathUtils.lerp(animationStart[2], z, eased);
+    groupRef.current.position.y = 0.1 + Math.sin(Math.PI * eased) * 0.22;
+  });
 
   const main = selected ? "#d9b84c" : white ? "#eee9dc" : "#171412";
   const edge = selected ? "#ffe38a" : white ? "#b9b09f" : "#050403";
@@ -57,6 +71,7 @@ function Piece({ type, color, square, selected, onClick }: {
 
   return (
     <group
+      ref={groupRef}
       position={[x, selected ? 0.18 : 0.1, z]}
       scale={selected ? 1.04 : 1}
       onClick={(e) => {
@@ -264,6 +279,7 @@ function Board({ game, selected, legalMoves, onSquare }: {
   selected: Square | null;
   legalMoves: string[];
   onSquare: (square: Square) => void;
+  lastMove: { from: Square; to: Square } | null;
 }) {
   const pieces = useMemo(() => {
     const result: { square:string; type:PieceSymbol; color:Color }[] = [];
@@ -343,7 +359,13 @@ function Board({ game, selected, legalMoves, onSquare }: {
       })}
 
       {pieces.map((piece) => (
-        <Piece key={piece.square} {...piece} selected={piece.square === selected} onClick={() => onSquare(piece.square)} />
+        <Piece
+          key={piece.square}
+          {...piece}
+          selected={piece.square === selected}
+          animateFrom={lastMove?.to === piece.square ? lastMove.from : undefined}
+          onClick={() => onSquare(piece.square)}
+        />
       ))}
     </group>
   );
@@ -352,6 +374,7 @@ function Board({ game, selected, legalMoves, onSquare }: {
 export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void }) {
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
+  const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
 
   const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
@@ -391,6 +414,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
           promotion: "q",
         });
         setGame(nextGame);
+        setLastMove({ from: selected, to: square });
         setSelected(null);
         return;
       } catch {
@@ -409,6 +433,7 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
   function reset() {
     setGame(new Chess());
     setSelected(null);
+    setLastMove(null);
   }
 
   return (
@@ -440,7 +465,13 @@ export default function ChessGame({ onBackToMenu }: { onBackToMenu?: () => void 
               shadow-bias={-0.00015}
             />
             <Environment preset="studio" />
-            <Board game={game} selected={selected} legalMoves={legalMoves} onSquare={handleSquare} />
+            <Board
+              game={game}
+              selected={selected}
+              legalMoves={legalMoves}
+              lastMove={lastMove}
+              onSquare={handleSquare}
+            />
             <OrbitControls
               enablePan={false}
               enableDamping
