@@ -896,18 +896,40 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
                 const augment = getAugmentDefinition(id);
                 if (!augment) return null;
                 return (
-                  <button key={id} className={`augment-choice-card tier-${augment.tier}`} onClick={() => onChooseAugment?.(id)}>
+                  <div
+                    key={id}
+                    className={`augment-choice-card tier-${augment.tier}`}
+                    onClick={() => onChooseAugment?.(id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") onChooseAugment?.(id);
+                    }}
+                  >
                     <div className="augment-choice-tier">{augment.tier === "transcendent" ? "✦ TRANSCENDENT" : `${augment.tier.toUpperCase()} · ${augment.category.toUpperCase()}`}</div>
                     <h3>{augment.name}</h3>
                     <p>{augment.description}</p>
-                    <span>SELECT →</span>
-                  </button>
+                    <div className="augment-choice-actions">
+                      <span>SELECT →</span>
+                      <button
+                        type="button"
+                        className="augment-card-reroll"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onRerollAugment?.(index);
+                        }}
+                        disabled={(augmentState?.rerollsRemaining ?? 0) <= 0}
+                      >
+                        ↻ REROLL THIS
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
             <div className="augment-reroll-row">
-              <span>REROLLS REMAINING <b>{augmentState?.rerollsRemaining ?? 0}</b></span>
-              <button onClick={onRerollAugment} disabled={(augmentState?.rerollsRemaining ?? 0) <= 0}>REROLL</button>
+              <span>SHARED REROLLS REMAINING <b>{augmentState?.rerollsRemaining ?? 0}</b></span>
+              <span>REROLL A CARD TO KEEP THE OTHER TWO</span>
             </div>
           </div>
         </div>
