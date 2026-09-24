@@ -687,7 +687,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
                 ))}
               </div>
             )}
-            {!onlineSocket && null}
+            </div>}
           </div>
 
           <div className="panel-card">
