@@ -219,34 +219,46 @@ export default function ChessGame() {
   const [game, setGame] = useState(() => new Chess());
   const [selected, setSelected] = useState<Square | null>(null);
 
-  const legalMoves = useMemo(() => {
+  const legalMoveObjects = useMemo(() => {
     if (!selected) return [];
     try {
-      return game.moves({ square: selected, verbose: true }).map((move) => move.to);
+      return game.moves({ square: selected, verbose: true });
     } catch {
       return [];
     }
   }, [game, selected]);
 
+  const legalMoves = legalMoveObjects.map((move) => move.to);
+
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
   const status = game.isCheckmate()
     ? `${turn === "WHITE" ? "BLACK" : "WHITE"} CHECKMATES`
-    : game.isDraw()
-      ? "DRAW"
-      : game.isCheck()
-        ? `${turn} IN CHECK`
-        : `${turn} TO MOVE`;
+    : game.isStalemate()
+      ? "STALEMATE"
+      : game.isDraw()
+        ? "DRAW"
+        : game.isCheck()
+          ? `${turn} IN CHECK`
+          : `${turn} TO MOVE`;
 
   function handleSquare(square: Square) {
     const piece = game.get(square as any);
 
     if (selected && legalMoves.includes(square)) {
+      const nextGame = new Chess(game.fen());
       try {
-        game.move({ from: selected, to: square, promotion: "q" });
-        setGame(new Chess(game.fen()));
+        nextGame.move({
+          from: selected,
+          to: square,
+          promotion: "q",
+        });
+        setGame(nextGame);
         setSelected(null);
         return;
-      } catch {}
+      } catch {
+        setSelected(null);
+        return;
+      }
     }
 
     if (piece && piece.color === game.turn()) {
