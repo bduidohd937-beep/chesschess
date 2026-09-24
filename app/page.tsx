@@ -71,8 +71,8 @@ export default function Home() {
     return (
       <OnlineLobby
         onBack={() => setGameType(null)}
-        onGameStart={(socket, roomId, color) => {
-          startOnline(socket, roomId, color);
+        onGameStart={(socket, roomId, color, tiers) => {
+          startOnline(socket, roomId, color, tiers);
         }}
       />
     );
