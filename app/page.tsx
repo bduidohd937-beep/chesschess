@@ -5,6 +5,7 @@ import type { Socket } from "socket.io-client";
 import ChessGame from "@/components/chess/ChessGame";
 import ModeMenu from "@/components/menu/ModeMenu";
 import OnlineLobby from "@/components/online/OnlineLobby";
+import AugmentChessGame from "@/components/augment/AugmentChessGame";
 
 type MenuMode = "root" | "offline" | "online";
 type GameType = "classic" | "augment";
@@ -46,26 +47,30 @@ export default function Home() {
     );
   }
 
-  if (gameType === "augment") {
+  if (gameType === "augment" && menuMode === "offline") {
+    return <AugmentChessGame onBackToMenu={() => { setGameType(null); setMenuMode("offline"); }} />;
+  }
+
+  if (gameType === "augment" && menuMode === "online" && onlineSocket) {
     return (
-      <main className="mode-menu">
-        <div className="mode-hero">
-          <div className="eyebrow">AUGMENT CHESS</div>
-          <h1>COMING SOON</h1>
-          <p>The augment battlefield is being built as a separate game experience.</p>
-          <button className="online-secondary" onClick={() => { setGameType(null); }}>BACK TO MODE SELECT</button>
-        </div>
-      </main>
+      <AugmentChessGame
+        onlineSocket={onlineSocket}
+        onlineRoomId={onlineRoomId}
+        onlinePlayerColor={onlinePlayerColor}
+        onBackToMenu={() => { onlineSocket.disconnect(); setOnlineSocket(null); setGameType(null); setMenuMode("online"); }}
+      />
     );
   }
 
-  if (menuMode === "online" && !gameType) {
-    if (!onlineSocket) {
-      return <OnlineLobby onBack={() => setMenuMode("root")} onGameStart={(socket, roomId, color) => {
-        setGameType("classic");
-        startOnline(socket, roomId, color);
-      }} />;
-    }
+  if (menuMode === "online" && gameType && !onlineSocket) {
+    return (
+      <OnlineLobby
+        onBack={() => setGameType(null)}
+        onGameStart={(socket, roomId, color) => {
+          startOnline(socket, roomId, color);
+        }}
+      />
+    );
   }
 
   if (menuMode === "root") {
