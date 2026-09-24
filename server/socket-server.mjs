@@ -119,11 +119,16 @@ io.on("connection",socket=>{
       }else if(custom===true&&augment==="S001"){
         if(!moving||moving.type!=="p"||moving.color!==socket.data.color)throw new Error("INVALID S001 MOVE");
         const direction=moving.color==="w"?1:-1;
-        if(to[0]!==from[0]||Number(to[1])-Number(from[1])!==direction*2||Number(from[1])!==(moving.color==="w"?2:7))throw new Error("INVALID S001 MOVE");
-        const middle=from[0]+(Number(from[1])+direction);
+        const startRank=moving.color==="w"?2:7;
+        const fromRank=Number(from[1]);
+        const toRank=Number(to[1]);
+        if(from[0]!==to[0]||fromRank!==startRank||toRank-fromRank!==direction*2)throw new Error("INVALID S001 MOVE");
+        const middle=from[0]+(fromRank+direction);
         if(before.get(middle)||target)throw new Error("BLOCKED S001 MOVE");
         const next=customPosition(before,from,to);
-        const fen=next.fen().split(" ");fen[3]=to[0]+(Number(to[1])+(moving.color==="w"?-1:1));room.game=new Chess(fen.join(" "));
+        const fen=next.fen().split(" ");
+        fen[3]=to[0]+(toRank-direction);
+        room.game=new Chess(fen.join(" "));
       }else if(custom===true&&augment==="S002"){
         if(!moving||moving.type!=="n"||moving.color!==socket.data.color)throw new Error("INVALID S002 MOVE");
         const direction=moving.color==="w"?1:-1;
