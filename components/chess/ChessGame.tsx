@@ -453,6 +453,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const stockfishRef = useRef<Worker | null>(null);
   const engineReadyRef = useRef(false);
   const aiSearchIdRef = useRef(0);
+  const augmentSelectionRef = useRef(augmentSelection);
+  augmentSelectionRef.current = augmentSelection;
 
   useEffect(() => {
     if (onlineSocket) return;
@@ -470,6 +472,10 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       const match = line.match(/^bestmove ([a-h][1-8])([a-h][1-8])([qrbn])?/);
       const searchId = aiSearchIdRef.current;
       if (!match) {
+        setAiThinking(false);
+        return;
+      }
+      if (augmentSelectionRef.current && !augmentSelectionRef.current.selected) {
         setAiThinking(false);
         return;
       }
@@ -506,6 +512,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   useEffect(() => {
     if (onlineSocket) return;
     if (!aiEnabled || game.turn() !== "b" || game.isGameOver() || pendingPromotion || !engineReady) return;
+    if (augmentSelection && !augmentSelection.selected) return;
     const worker = stockfishRef.current;
     if (!worker) return;
     const level = AI_LEVELS[aiLevel];
@@ -519,7 +526,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     return () => {
       if (searchId === aiSearchIdRef.current) worker.postMessage("stop");
     };
-  }, [aiEnabled, aiLevel, game, pendingPromotion, engineReady, onlineSocket]);
+  }, [aiEnabled, aiLevel, game, pendingPromotion, engineReady, onlineSocket, augmentSelection]);
 
   useEffect(() => {
     if (!onlineSocket) return;
