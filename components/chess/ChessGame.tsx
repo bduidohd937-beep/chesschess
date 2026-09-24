@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Chess, type Color, type PieceSymbol } from "chess.js";
+import { Chess, type Color, type PieceSymbol, type Square } from "chess.js";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import type { Socket } from "socket.io-client";
 
-type Square = string;
 type PromotionPiece = "q" | "r" | "b" | "n";
 type AiLevel = "beginner" | "intermediate" | "advanced";
 
@@ -674,20 +673,27 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         <aside className="side-panel">
           <div className="panel-card">
             <div className="panel-label">{onlineSocket ? "ONLINE MATCH" : "OPPONENT"}</div>
-            {onlineSocket ? <div className="game-status">YOU ARE {onlinePlayerColor === "w" ? "WHITE" : "BLACK"} · {onlineStatus}</div> : <div className="ai-toggle-row">
-              <button className={`ai-choice ${aiEnabled ? "active" : ""}`} onClick={() => { setAiEnabled(true); setAiThinking(false); }}>VS AI</button>
-              <button className={`ai-choice ${!aiEnabled ? "active" : ""}`} onClick={() => { stockfishRef.current?.postMessage("stop"); setAiEnabled(false); setAiThinking(false); }}>2 PLAYER</button>
-            </div>
-            {!onlineSocket && aiEnabled && (
-              <div className="ai-levels">
-                {(Object.keys(AI_LEVELS) as AiLevel[]).map((level) => (
-                  <button key={level} className={`ai-level ${aiLevel === level ? "active" : ""}`} onClick={() => setAiLevel(level)}>
-                    {AI_LEVELS[level].label}
-                  </button>
-                ))}
+            {onlineSocket ? (
+              <div className="game-status">
+                YOU ARE {onlinePlayerColor === "w" ? "WHITE" : "BLACK"} · {onlineStatus}
               </div>
+            ) : (
+              <>
+                <div className="ai-toggle-row">
+                  <button className={`ai-choice ${aiEnabled ? "active" : ""}`} onClick={() => { setAiEnabled(true); setAiThinking(false); }}>VS AI</button>
+                  <button className={`ai-choice ${!aiEnabled ? "active" : ""}`} onClick={() => { stockfishRef.current?.postMessage("stop"); setAiEnabled(false); setAiThinking(false); }}>2 PLAYER</button>
+                </div>
+                {aiEnabled && (
+                  <div className="ai-levels">
+                    {(Object.keys(AI_LEVELS) as AiLevel[]).map((level) => (
+                      <button key={level} className={`ai-level ${aiLevel === level ? "active" : ""}`} onClick={() => setAiLevel(level)}>
+                        {AI_LEVELS[level].label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
-            </div>}
           </div>
 
           <div className="panel-card">
