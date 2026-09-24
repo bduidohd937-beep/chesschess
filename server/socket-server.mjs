@@ -134,6 +134,18 @@ io.on("connection",socket=>{
         const direction=moving.color==="w"?1:-1;
         if(to[0]!==from[0]||Number(to[1])-Number(from[1])!==direction)throw new Error("INVALID S002 MOVE");
         room.game=customPosition(before,from,to);
+      }else if(custom===true&&augment==="S004"){
+        if(!moving||moving.type!=="p"||moving.color!==socket.data.color)throw new Error("INVALID S004 MOVE");
+        if(before.history({verbose:true}).some((m)=>m.piece==="p"))throw new Error("INVALID S004 MOVE");
+        const direction=moving.color==="w"?1:-1;
+        const fromRank=Number(from[1]);
+        const toRank=Number(to[1]);
+        if(from[0]!==to[0]||toRank-fromRank!==direction*3)throw new Error("INVALID S004 MOVE");
+        if(before.get(from[0]+(fromRank+direction))||before.get(from[0]+(fromRank+direction*2))||target)throw new Error("BLOCKED S004 MOVE");
+        room.game=customPosition(before,from,to);
+        const fen=room.game.fen().split(" ");
+        fen[3]=from[0]+(fromRank+direction*2);
+        room.game=new Chess(fen.join(" "));
       }else{
         const legal=before.moves({square:from,verbose:true}).find(m=>m.to===to);
         if(!legal)throw new Error("ILLEGAL MOVE");
