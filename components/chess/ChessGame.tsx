@@ -13,7 +13,7 @@ const files = ["a","b","c","d","e","f","g","h"];
 function squarePosition(square: Square): [number, number, number] {
   const file = files.indexOf(square[0]);
   const rank = Number(square[1]) - 1;
-  return [file - 3.5, 0, 3.5 - rank];
+  return [file - 3.5, 0, rank - 3.5];
 }
 
 function pieceLabel(piece: PieceSymbol, color: Color) {
@@ -167,8 +167,23 @@ function Board({ game, selected, legalMoves, onSquare }: {
     <group rotation={[0, 0, 0]}>
       <mesh position={[0, -0.16, 0]} receiveShadow>
         <boxGeometry args={[8.7, 0.3, 8.7]} />
-        <meshStandardMaterial color="#3b2417" roughness={0.32} metalness={0.08} />
+        <meshStandardMaterial color="#0d0d0d" roughness={0.32} metalness={0.04} />
       </mesh>
+      <mesh position={[0, -0.01, 0]} receiveShadow>
+        <boxGeometry args={[8.45, 0.04, 8.45]} />
+        <meshStandardMaterial color="#f2f2f2" roughness={0.4} />
+      </mesh>
+      {Array.from({ length: 64 }, (_, i) => {
+        const col = i % 8;
+        const row = Math.floor(i / 8);
+        const light = (col + row) % 2 === 0;
+        return (
+          <mesh key={`floor-${i}`} position={[col - 3.5, 0.015, 3.5 - row]} receiveShadow>
+            <boxGeometry args={[0.98, 0.025, 0.98]} />
+            <meshStandardMaterial color={light ? "#f2f2f2" : "#171717"} roughness={0.42} />
+          </mesh>
+        );
+      })}
 
       {Array.from({ length: 64 }, (_, i) => {
         const col = i % 8;
