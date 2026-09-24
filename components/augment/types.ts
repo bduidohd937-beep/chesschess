@@ -27,6 +27,7 @@ export type AugmentSelection = {
 export type AugmentGameState = {
   piecesLost: number;
   rerollsRemaining: number;
+  selectionTiers: AugmentTier[];
   ownedAugments: AugmentId[];
   selections: AugmentSelection[];
   nextSelection: Exclude<AugmentSelectionPhase, "complete"> | null;
