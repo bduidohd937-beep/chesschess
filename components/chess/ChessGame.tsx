@@ -627,23 +627,28 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   useEffect(() => {
     if (!augmentMode || !augmentState || !hasAugment(augmentState, "T007") || t007Applied) return;
     const color = onlinePlayerColor ?? game.turn();
-    setGame(current => {
-      const next=new Chess(current.fen());
-      const choices=["p","n","b","r","q"] as const;
-      for(const row of next.board()) for(const item of row) {
-        if(!item || item.color!==color || item.type==="k") continue;
+    const choices=["p","n","b","r","q"] as const;
+    const next=new Chess(game.fen());
+    for(let row=0;row<8;row++) for(let col=0;col<8;col++){
+      const sq=`${files[col]}${8-row}` as Square;
+      const item=next.get(sq);
+      if(item && item.color===color && item.type!=="k"){
+        next.remove(sq); next.put({type:choices[Math.floor(Math.random()*choices.length)],color},sq);
       }
-      for(let row=0;row<8;row++) for(let col=0;col<8;col++){
-        const sq=`${files[col]}${8-row}` as Square;
-        const item=next.get(sq);
-        if(item && item.color===color && item.type!=="k"){
-          next.remove(sq); next.put({type:choices[Math.floor(Math.random()*choices.length)],color},sq);
-        }
-      }
-      return next;
-    });
+    }
+    setGame(next);
     setT007Applied(true);
   }, [augmentMode, augmentState, t007Applied, onlinePlayerColor]);
+
+  useEffect(() => {
+    if (!augmentMode || !augmentState || !hasAugment(augmentState, "P004") || p004Portal) return;
+    const empties: Square[] = [];
+    for (let row=2; row<=5; row++) for (let col=2; col<=5; col++) {
+      const sq=`${files[col]}${row}` as Square;
+      if (!game.get(sq)) empties.push(sq);
+    }
+    if (empties.length >= 2) setP004Portal({ a: empties[0], b: empties[empties.length - 1] });
+  }, [augmentMode, augmentState, game, p004Portal]);
 
   useEffect(() => {
     if (!augmentMode || !augmentState || !hasAugment(augmentState, "P002") || p002AppliedRef.current) return;
@@ -1187,6 +1192,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
                   setLastMove(null);
                   setCaptureSquare(null);
                   setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
+          if (!p006Used[movingPiece.color]) setP006Used((current) => ({ ...current, [movingPiece.color]: false }));
                   return;
                 }
                 if (game.get(square)) onPieceCaptured?.(oppositeColor(movingPiece.color));
@@ -1303,6 +1309,20 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
                 setS006Boost((current) => ({ ...current, [color]: true }));
               }
             });
+          }
+        }
+        if (hasAugment(augmentState, "T003") && movingPiece?.type === "p" && (square[1] === "1" || square[1] === "8") && !t003Used[movingPiece.color]) {
+          const enemies: Square[] = [];
+          for (let row=0; row<8; row++) for (let col=0; col<8; col++) {
+            const sq=`${files[col]}${8-row}` as Square;
+            const item=finalGame.get(sq);
+            if (item && item.color !== movingPiece.color && item.type !== "k" && item.type !== "q") enemies.push(sq);
+          }
+          if (enemies.length) {
+            const target = enemies[0];
+            finalGame.remove(target);
+            finalGame.remove(square);
+            setT003Used((current) => ({ ...current, [movingPiece.color]: true }));
           }
         }
         setGame(finalGame);
