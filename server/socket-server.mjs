@@ -60,7 +60,7 @@ function clearRay(game,from,to){
 io.on("connection",socket=>{
   socket.on("create-room",()=>{
     const roomId=makeRoomId();
-    rooms.set(roomId,{white:socket.id,black:null,game:new Chess(),startAugmentTiers:createStartAugmentTiers(),s004Used:{w:false,b:false}});
+    rooms.set(roomId,{white:socket.id,black:null,game:new Chess(),startAugmentTiers:createStartAugmentTiers(),s004Used:{w:false,b:false},g001Uses:{w:2,b:2}});
     socket.join(roomId);socket.data.roomId=roomId;socket.data.color="w";
     socket.emit("room-created",{roomId});
   });
@@ -81,6 +81,7 @@ io.on("connection",socket=>{
     if(!room.white||!room.black)return reply?.({ok:false,error:"WAITING FOR OPPONENT"});
     room.game=new Chess();
     room.s004Used={w:false,b:false};
+    room.g001Uses={w:2,b:2};
     io.to(roomId).emit("game-reset",{fen:room.game.fen()});
     reply?.({ok:true});
   });
@@ -98,6 +99,7 @@ io.on("connection",socket=>{
       let move={from,to,promotion:null};
 
       if(custom===true&&augment==="G001"){
+        if((room.g001Uses?.[socket.data.color] ?? 0)<=0) throw new Error("NO G001 USES");
         if(!moving||moving.type!=="b"||moving.color!==socket.data.color||!target||target.color===moving.color||target.type!=="p") throw new Error("INVALID G001 MOVE");
         const df=Math.abs(to.charCodeAt(0)-from.charCodeAt(0));
         const dr=Math.abs(Number(to[1])-Number(from[1]));
@@ -110,6 +112,7 @@ io.on("connection",socket=>{
         const result=new Chess(fen.join(" "));
         if(!kingSafe(result,moving.color))throw new Error("KING IN CHECK");
         room.game=result;
+        room.g001Uses[socket.data.color]-=1;
       }else if(custom===true&&augment==="G002"){
         const knightCount=before.board().flat().filter(p=>p?.type==="n"&&p.color===socket.data.color).length;
         if(!moving||moving.type!=="n"||moving.color!==socket.data.color||knightCount!==1)throw new Error("INVALID G002 MOVE");
@@ -150,7 +153,7 @@ io.on("connection",socket=>{
         const direction=moving.color==="w"?1:-1;
         const fromRank=Number(from[1]);
         const toRank=Number(to[1]);
-        if(from[0]!==to[0]||toRank-fromRank!==direction*3)throw new Error("INVALID S004 MOVE");
+        if(from[0]!==to[0]||fromRank!==(moving.color==="w"?2:7)||toRank-fromRank!==direction*3)throw new Error("INVALID S004 MOVE");
         if(before.get(from[0]+(fromRank+direction))||before.get(from[0]+(fromRank+direction*2))||target)throw new Error("BLOCKED S004 MOVE");
         room.game=customPosition(before,from,to);
         const fen=room.game.fen().split(" ");
