@@ -576,6 +576,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [s006Boost, setS006Boost] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [s005Used, setS005Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [t001Used, setT001Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
+  const [g004Barrier, setG004Barrier] = useState<{ square: Square; color: Color; turns: number } | null>(null);
+  const [t002Shields, setT002Shields] = useState<{ w: Square[]; b: Square[] }>({ w: [], b: [] });
+  const g004AppliedRef = useRef(false);
+  const t002AppliedRef = useRef(false);
+
   const p002AppliedRef = useRef(false);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
