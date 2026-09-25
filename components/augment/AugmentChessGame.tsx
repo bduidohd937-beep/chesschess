@@ -47,8 +47,7 @@ export default function AugmentChessGame({
     setState((previous) => rerollCurrentSelection(previous, optionIndex));
   }
 
-  function onPieceCaptured(_color: "w" | "b") {
-    if (onlineSocket) return;
+  function onPieceCaptured(_lostColor: "w" | "b") {
     setState((previous) => recordPiecesLost(previous, 1));
   }
 
