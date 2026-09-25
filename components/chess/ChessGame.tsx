@@ -861,12 +861,6 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
-      if (piece.type === "r" && hasAugment(augmentState, "G005")) {
-        return [
-          ...baseMoves.filter((move) => false),
-        ];
-      }
-
       if (piece.type === "k" && hasAugment(augmentState, "T005")) {
         for (const [df, dr] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) {
           let fi = fromFile + df;
@@ -1135,6 +1129,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             } else if (knightCount === 1 && ((absFile === 0 && absRank > 0) || (absRank === 0 && absFile > 0) || absFile === absRank)) {
               customAugment = "G002";
             }
+          } else if (movingPiece?.type === "k" && hasAugment(augmentState, "T005")) {
+            customAugment = "T005";
           }
 
           if (!customAugment || !augmentState || !hasAugment(augmentState, customAugment)) {
