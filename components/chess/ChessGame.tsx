@@ -575,6 +575,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [s004Used, setS004Used] = useState(false);
   const [s006Boost, setS006Boost] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [s005Used, setS005Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
+  const [t001Used, setT001Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
+  const p002AppliedRef = useRef(false);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
   const [aiThinking, setAiThinking] = useState(false);
@@ -586,6 +588,28 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const aiSearchIdRef = useRef(0);
   const augmentSelectionRef = useRef(augmentSelection);
   augmentSelectionRef.current = augmentSelection;
+
+  useEffect(() => {
+    if (!augmentMode || !augmentState || !hasAugment(augmentState, "P002") || p002AppliedRef.current) return;
+    p002AppliedRef.current = true;
+    setGame((current) => {
+      const next = new Chess(current.fen());
+      for (const square of (["c1","f1","c8","f8"] as Square[])) {
+        const bishop = next.get(square);
+        if (!bishop || bishop.type !== "b") continue;
+        const file = squareFile(square);
+        const rank = squareRank(square);
+        for (const [df, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+          const fi = file + df;
+          const ri = rank + dr;
+          if (fi < 0 || fi > 7 || ri < 1 || ri > 8) continue;
+          const target = `${files[fi]}${ri}` as Square;
+          if (!next.get(target)) next.put({ type: "p", color: bishop.color }, target);
+        }
+      }
+      return next;
+    });
+  }, [augmentMode, augmentState]);
 
   useEffect(() => {
     if (onlineSocket) return;
@@ -811,6 +835,56 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
 
       const s005Active = piece.type === "n" && hasAugment(augmentState, "S005") && !s005Used[piece.color];
 
+      const rookTargets: Square[] = [];
+      const kingTargets: Square[] = [];
+      if (hasAugment(augmentState, "G005") && piece.type !== "r") {
+        const rooks = game.board().flatMap((row, rowIndex) => row.map((item, colIndex) =>
+          item?.type === "r" && item.color === piece.color ? `${files[colIndex]}${8-rowIndex}` as Square : null
+        )).filter(Boolean) as Square[];
+        const inRookRange = rooks.some((rook) => rook[0] === selected[0] || rook[1] === selected[1]);
+        if (inRookRange) {
+          for (const [df, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            let fi = fromFile + df;
+            let ri = fromRank + dr;
+            while (fi >= 0 && fi < 8 && ri >= 1 && ri <= 8) {
+              const target = `${files[fi]}${ri}` as Square;
+              const occupant = game.get(target);
+              if (occupant) {
+                if (occupant.color !== piece.color) rookTargets.push(target);
+                break;
+              }
+              rookTargets.push(target);
+              fi += df;
+              ri += dr;
+            }
+          }
+        }
+      }
+
+      if (piece.type === "r" && hasAugment(augmentState, "G005")) {
+        return [
+          ...baseMoves.filter((move) => false),
+        ];
+      }
+
+      if (piece.type === "k" && hasAugment(augmentState, "T005")) {
+        for (const [df, dr] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+          let fi = fromFile + df;
+          let ri = fromRank + dr;
+          while (fi >= 0 && fi < 8 && ri >= 1 && ri <= 8) {
+            const target = `${files[fi]}${ri}` as Square;
+            const occupant = game.get(target);
+            if (occupant) {
+              if (occupant.color !== piece.color) kingTargets.push(target);
+              break;
+            }
+            kingTargets.push(target);
+            fi += df;
+            ri += dr;
+          }
+        }
+      }
+
       const s006Targets: Square[] = [];
       if (hasAugment(augmentState, "S006") && s006Boost[piece.color] && piece.type !== "n" && piece.type !== "p") {
         const directions =
@@ -845,8 +919,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
+      const filteredBaseMoves = hasAugment(augmentState, "G005") && piece.type === "r" ? [] : baseMoves;
+      const augmentedBaseMoves = filteredBaseMoves.map((move) => s005Active ? { ...move, flags: "s" } : move);
+
       return [
-        ...baseMoves.map((move) => s005Active ? { ...move, flags: "s" } : move),
+        ...augmentedBaseMoves,
         ...extraTargets
           .filter((to, index, list) => list.indexOf(to) === index && !baseMoves.some((move) => move.to === to))
           .map((to) => ({
@@ -873,6 +950,12 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             flags: "a",
             san: "",
           })),
+        ...rookTargets
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to))
+          .map((to) => ({ color: piece.color, from: selected, to, piece: piece.type, captured: game.get(to)?.type, flags: "a", san: "" })),
+        ...kingTargets
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to))
+          .map((to) => ({ color: piece.color, from: selected, to, piece: piece.type, captured: game.get(to)?.type, flags: "a", san: "" })),
         ...s006Targets
           .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to) && !sniperTargets.includes(to))
           .map((to) => ({
@@ -1185,6 +1268,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setG001Uses(2);
     setS004Used(false);
     setS006Boost({ w: false, b: false });
+    setT001Used({ w: false, b: false });
+    p002AppliedRef.current = false;
     setOnlineGameOver(false);
   }
 
