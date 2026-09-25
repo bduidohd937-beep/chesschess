@@ -545,6 +545,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [g001Uses, setG001Uses] = useState(2);
   const [s004Used, setS004Used] = useState(false);
+  const [s005Used, setS005Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
   const [aiThinking, setAiThinking] = useState(false);
@@ -591,7 +592,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setLastMove({ from, to });
           const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
           const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-          if (captured) onPieceCaptured?.("w");
+          if (captured) onPieceCaptured?.(oppositeColor(game.get(pendingPromotion.from)?.color ?? "w"));
           setCaptureSquare(captured ? to : null);
           return nextGame;
         } catch {
@@ -775,6 +776,15 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
+      const s005Targets: Square[] = [];
+      if (
+        piece.type === "n" &&
+        hasAugment(augmentState, "S005") &&
+        !s005Used[piece.color]
+      ) {
+        for (const move of baseMoves) s005Targets.push(move.to as Square);
+      }
+
       return [
         ...baseMoves,
         ...extraTargets
@@ -803,8 +813,19 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             flags: "a",
             san: "",
           })),
+        ...s005Targets
+          .filter((to) => !extraTargets.includes(to))
+          .map((to) => ({
+            color: piece.color,
+            from: selected,
+            to,
+            piece: piece.type,
+            captured: game.get(to)?.type,
+            flags: "s",
+            san: "",
+          })),
         ...sniperTargets
-          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to))
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to) && !s005Targets.includes(to))
           .map((to) => ({
             color: piece.color,
             from: selected,
@@ -818,7 +839,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     } catch {
       return [];
     }
-  }, [game, selected, augmentMode, augmentState, s004Used]);
+  }, [game, selected, augmentMode, augmentState, s004Used, s005Used]);
 
   const effectiveLegalMoveObjects = legalMoveObjects.filter(
     (move) => move.flags !== "g" || g001Uses > 0,
@@ -906,6 +927,45 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setSelected(null);
           return;
         }
+        const isS005Move = Boolean(moveObject && moveObject.flags === "s");
+        if (isS005Move) {
+          if (!movingPiece || movingPiece.type !== "n" || !augmentState || !hasAugment(augmentState, "S005") || s005Used[movingPiece.color]) {
+            setSelected(null);
+            return;
+          }
+          const customGame = makeCustomMove(game, selected, square);
+          if (!customGame) {
+            setSelected(null);
+            return;
+          }
+          const customFen = customGame.fen().split(" ");
+          customFen[1] = movingPiece.color;
+          const sameTurnGame = new Chess(customFen.join(" "));
+          setGame(sameTurnGame);
+          setLastMove({ from: selected, to: square });
+          setCaptureSquare(game.get(square) ? square : null);
+          setS005Used((current) => ({ ...current, [movingPiece.color]: true }));
+          if (onlineSocket && onlineRoomId) {
+            onlineSocket.emit(
+              "move",
+              { roomId: onlineRoomId, from: selected, to: square, custom: true, augment: "S005" },
+              (result: { ok?: boolean; error?: string }) => {
+                if (!result?.ok) {
+                  setGame(game);
+                  setLastMove(null);
+                  setCaptureSquare(null);
+                  setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
+                  return;
+                }
+                if (game.get(square)) onPieceCaptured?.(oppositeColor(movingPiece.color));
+              },
+            );
+          } else if (game.get(square)) {
+            onPieceCaptured?.(oppositeColor(movingPiece.color));
+          }
+          setSelected(null);
+          return;
+        }
         const isCustomAugmentMove = Boolean(moveObject && moveObject.flags === "a");
         if (isCustomAugmentMove) {
           const deltaRank = Number(square[1]) - Number(selected[1]);
@@ -977,6 +1037,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
         if (captured) onPieceCaptured?.(oppositeColor(movingPiece?.color ?? "w"));
+        if (movingPiece?.color) setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
         if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square });
         setLastMove({ from: selected, to: square });
         setCaptureSquare(captured ? square : null);
