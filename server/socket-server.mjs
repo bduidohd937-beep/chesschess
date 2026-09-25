@@ -183,7 +183,7 @@ io.on("connection",socket=>{
       const captured=Boolean(target);
       const fen=room.game.fen();
       reply?.({ok:true,fen,from:move.from,to:move.to,promotion:move.promotion??null,captured});
-      socket.to(roomId).emit("opponent-move",{fen,from:move.from,to:move.to,promotion:move.promotion??null,captured});
+      io.to(roomId).emit("opponent-move",{fen,from:move.from,to:move.to,promotion:move.promotion??null,captured});
     }catch{
       reply?.({ok:false,error:"ILLEGAL MOVE"});
     }
