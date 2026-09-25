@@ -673,6 +673,40 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   }, [augmentMode, augmentState]);
 
   useEffect(() => {
+    if (!augmentMode || !augmentState || !hasAugment(augmentState, "G004") || g004AppliedRef.current) return;
+    g004AppliedRef.current = true;
+    const color = onlinePlayerColor ?? game.turn();
+    const centerSquares = ["d4", "e4", "d5", "e5"] as Square[];
+    const protectedSquare = centerSquares.find((square) => game.get(square)?.color === color);
+    if (protectedSquare) {
+      setG004Barrier({ square: protectedSquare, color, turns: 3 });
+    }
+  }, [augmentMode, augmentState, game, onlinePlayerColor]);
+
+  useEffect(() => {
+    if (!augmentMode || !augmentState || !hasAugment(augmentState, "T002") || t002AppliedRef.current) return;
+    t002AppliedRef.current = true;
+    const color = onlinePlayerColor ?? game.turn();
+    const queenSquares = ["a1","b1","c1","d1","e1","f1","g1","h1","a8","b8","c8","d8","e8","f8","g8","h8"] as Square[];
+    const queenSquare = queenSquares.find((square) => game.get(square)?.type === "q" && game.get(square)?.color === color);
+    if (!queenSquare) return;
+    const shielded: Square[] = [];
+    const qf = squareFile(queenSquare);
+    const qr = squareRank(queenSquare);
+    for (let df = -1; df <= 1; df += 1) {
+      for (let dr = -1; dr <= 1; dr += 1) {
+        if (df === 0 && dr === 0) continue;
+        const fi = qf + df;
+        const ri = qr + dr;
+        if (fi < 0 || fi > 7 || ri < 1 || ri > 8) continue;
+        const square = `${files[fi]}${ri}` as Square;
+        if (game.get(square)?.color === color) shielded.push(square);
+      }
+    }
+    setT002Shields((current) => ({ ...current, [color]: shielded }));
+  }, [augmentMode, augmentState, game, onlinePlayerColor]);
+
+  useEffect(() => {
     if (onlineSocket) return;
     const worker = new Worker("/stockfish.wasm.js");
     stockfishRef.current = worker;
@@ -1138,6 +1172,30 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           return;
         }
         const moveObject = effectiveLegalMoveObjects.find((move) => move.to === square);
+        const targetPiece = game.get(square);
+        if (
+          targetPiece &&
+          targetPiece.color !== movingPiece?.color &&
+          g004Barrier?.square === square &&
+          g004Barrier.color === targetPiece.color &&
+          g004Barrier.turns > 0
+        ) {
+          setG004Barrier(null);
+          setSelected(null);
+          return;
+        }
+        if (
+          targetPiece &&
+          targetPiece.color !== movingPiece?.color &&
+          t002Shields[targetPiece.color].includes(square)
+        ) {
+          setT002Shields((current) => ({
+            ...current,
+            [targetPiece.color]: current[targetPiece.color].filter((item) => item !== square),
+          }));
+          setSelected(null);
+          return;
+        }
         const isSniperMove = Boolean(moveObject && moveObject.flags === "g");
         if (isSniperMove) {
           if (g001Uses <= 0) {
