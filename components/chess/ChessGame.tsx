@@ -776,17 +776,10 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
-      const s005Targets: Square[] = [];
-      if (
-        piece.type === "n" &&
-        hasAugment(augmentState, "S005") &&
-        !s005Used[piece.color]
-      ) {
-        for (const move of baseMoves) s005Targets.push(move.to as Square);
-      }
+      const s005Active = piece.type === "n" && hasAugment(augmentState, "S005") && !s005Used[piece.color];
 
       return [
-        ...baseMoves,
+        ...baseMoves.map((move) => s005Active ? { ...move, flags: "s" } : move),
         ...extraTargets
           .filter((to, index, list) => list.indexOf(to) === index && !baseMoves.some((move) => move.to === to))
           .map((to) => ({
@@ -813,19 +806,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             flags: "a",
             san: "",
           })),
-        ...s005Targets
-          .filter((to) => !extraTargets.includes(to))
-          .map((to) => ({
-            color: piece.color,
-            from: selected,
-            to,
-            piece: piece.type,
-            captured: game.get(to)?.type,
-            flags: "s",
-            san: "",
-          })),
         ...sniperTargets
-          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to) && !s005Targets.includes(to))
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to))
           .map((to) => ({
             color: piece.color,
             from: selected,
