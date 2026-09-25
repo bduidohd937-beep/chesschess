@@ -591,7 +591,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setLastMove({ from, to });
           const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
           const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-          if (captured) onPieceCaptured?.("b");
+          if (captured) onPieceCaptured?.("w");
           setCaptureSquare(captured ? to : null);
           return nextGame;
         } catch {
@@ -637,7 +637,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       setLastMove(from && to ? { from, to } : null);
       setCaptureSquare(null);
       setPendingPromotion(null);
-      if (captured) onPieceCaptured?.(onlinePlayerColor ?? "w");
+      if (captured) onPieceCaptured?.(onlinePlayerColor === "w" ? "w" : "b");
       setOnlineGameOver(new Chess(fen).isGameOver());
     };
     const onGameReset = ({ fen }: { fen: string }) => {
@@ -899,7 +899,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           }
           setGame(customGame);
           setG001Uses((uses) => Math.max(0, uses - 1));
-          onPieceCaptured?.(movingPiece?.color ?? game.turn());
+          onPieceCaptured?.(oppositeColor(movingPiece?.color ?? game.turn()));
           setLastMove({ from: selected, to: selected });
           setCaptureSquare(square);
           if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square, custom: true, augment: "G001" });
@@ -976,7 +976,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         nextGame.move({ from: selected, to: square });
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
-        if (captured) onPieceCaptured?.(movingPiece?.color ?? "w");
+        if (captured) onPieceCaptured?.(oppositeColor(movingPiece?.color ?? "w"));
         if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square });
         setLastMove({ from: selected, to: square });
         setCaptureSquare(captured ? square : null);
