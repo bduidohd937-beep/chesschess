@@ -618,16 +618,19 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         const nextGame = new Chess(current.fen());
         try {
           nextGame.move({ from, to, promotion: promotion ?? "q" });
-          setLastMove({ from, to });
-          const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
-          const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-          if (captured) onPieceCaptured?.("w");
-          setCaptureSquare(captured ? to : null);
           return nextGame;
         } catch {
           return current;
         }
       });
+      const currentGame = gameRef.current;
+      if (currentGame.turn() === "b") {
+        const moveObject = currentGame.moves({ square: from, verbose: true }).find((move) => move.to === to);
+        const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
+        setLastMove({ from, to });
+        setCaptureSquare(captured ? to : null);
+        if (captured) onPieceCaptured?.("w");
+      }
       if (searchId === aiSearchIdRef.current) setAiThinking(false);
     };
     worker.postMessage("uci");
