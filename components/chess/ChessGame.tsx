@@ -835,6 +835,14 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
 
       const rookTargets: Square[] = [];
       const kingTargets: Square[] = [];
+      if (piece.type === "k" && hasAugment(augmentState, "P005")) {
+        for (const [df, dr] of [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]]) {
+          const fi = fromFile + df, ri = fromRank + dr;
+          if (fi < 0 || fi > 7 || ri < 1 || ri > 8) continue;
+          const target = `${files[fi]}${ri}` as Square;
+          if (game.get(target)?.color !== piece.color) kingTargets.push(target);
+        }
+      }
       if (hasAugment(augmentState, "G005") && piece.type !== "r") {
         const rooks = game.board().flatMap((row, rowIndex) => row.map((item, colIndex) =>
           item?.type === "r" && item.color === piece.color ? `${files[colIndex]}${8-rowIndex}` as Square : null
@@ -974,7 +982,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     } catch {
       return [];
     }
-  }, [game, selected, augmentMode, augmentState, s004Used, s005Used, s006Boost]);
+  }, [game, selected, augmentMode, augmentState, s004Used, s005Used, s006Boost, g004Barrier, t002Shields]);
 
   const effectiveLegalMoveObjects = legalMoveObjects.filter(
     (move) => move.flags !== "g" || g001Uses > 0,
@@ -995,7 +1003,14 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
   const moveNumber = Math.floor(game.history().length / 2) + 1;
   const isCheck = game.isCheck() && !game.isGameOver();
-  const isGameOver = game.isGameOver() || onlineGameOver;
+  const p005QueenGone = augmentMode && augmentState
+    ? (hasAugment(augmentState, "P005") && !game.board().flat().some((item) => item?.type === "q" && item.color === (onlinePlayerColor ?? "w")))
+      || (hasAugment(augmentState, "P005") && !game.board().flat().some((item) => item?.type === "q" && item.color === (onlinePlayerColor ?? "b")))
+    : false;
+  const g006Draw = augmentMode && augmentState
+    ? hasAugment(augmentState, "G006") && !game.board().flat().some((item) => item && item.type !== "k" && item.color === (onlinePlayerColor ?? game.turn()))
+    : false;
+  const isGameOver = game.isGameOver() || onlineGameOver || p005QueenGone || g006Draw;
   const whitePlayerLabel = onlineSocket
     ? onlinePlayerColor === "w" ? "YOU" : "OPPONENT"
     : "PLAYER 1";
@@ -1150,6 +1165,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             } else if (knightCount === 1 && ((absFile === 0 && absRank > 0) || (absRank === 0 && absFile > 0) || absFile === absRank)) {
               customAugment = "G002";
             }
+          } else if (movingPiece?.type === "k" && hasAugment(augmentState, "P005")) {
+            customAugment = "P005";
           } else if (movingPiece?.type === "k" && hasAugment(augmentState, "T005")) {
             customAugment = "T005";
           } else if (hasAugment(augmentState, "G005")) {
@@ -1289,6 +1306,10 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setS004Used(false);
     setS006Boost({ w: false, b: false });
     setT001Used({ w: false, b: false });
+    setG004Barrier(null);
+    setT002Shields({ w: [], b: [] });
+    g004AppliedRef.current = false;
+    t002AppliedRef.current = false;
     p002AppliedRef.current = false;
     setOnlineGameOver(false);
   }
