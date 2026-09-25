@@ -1084,6 +1084,43 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         (hasAugment(augmentState, "P002") && piece.type === "b")
           ? []
           : baseMoves;
+
+      const golden = hasAugment(augmentState, "P003") && p003Golden.includes(selected);
+      const goldenExtraTargets: Square[] = [];
+      if (golden) {
+        const addGoldenRay = (directions: number[][]) => {
+          for (const [df, dr] of directions) {
+            const fi = fromFile + df;
+            const ri = fromRank + dr;
+            if (fi < 0 || fi > 7 || ri < 1 || ri > 8) continue;
+            const first = game.get(`${files[fi]}${ri}` as Square);
+            if (!first) {
+              const s1 = `${files[fi]}${ri}` as Square;
+              goldenExtraTargets.push(s1);
+              const fi2 = fi + df;
+              const ri2 = ri + dr;
+              if (fi2 >= 0 && fi2 < 8 && ri2 >= 1 && ri2 <= 8) {
+                const s2 = `${files[fi2]}${ri2}` as Square;
+                const second = game.get(s2);
+                if (!second) goldenExtraTargets.push(s2);
+              }
+            }
+          }
+        };
+        if (piece.type === "r") addGoldenRay([[1,0],[-1,0],[0,1],[0,-1]]);
+        if (piece.type === "b") addGoldenRay([[1,1],[1,-1],[-1,1],[-1,-1]]);
+        if (piece.type === "q" || piece.type === "k") addGoldenRay([[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]);
+        if (piece.type === "p") {
+          const dir = piece.color === "w" ? 1 : -1;
+          const one = fromRank + dir;
+          const two = fromRank + dir * 2;
+          if (one >= 1 && one <= 8 && !game.get(`${files[fromFile]}${one}` as Square)) {
+            goldenExtraTargets.push(`${files[fromFile]}${one}` as Square);
+            if (two >= 1 && two <= 8 && !game.get(`${files[fromFile]}${two}` as Square)) goldenExtraTargets.push(`${files[fromFile]}${two}` as Square);
+          }
+        }
+      }
+
       const augmentedBaseMoves = filteredBaseMoves.map((move) => t001Active ? { ...move, flags: "t" } : s005Active ? { ...move, flags: "s" } : move);
 
       return [
@@ -1125,6 +1162,25 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           .map((to) => ({ color: piece.color, from: selected, to, piece: piece.type, captured: game.get(to)?.type, flags: "a", san: "" })),
         ...s006Targets
           .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to) && !sniperTargets.includes(to))
+          .map((to) => ({
+            color: piece.color,
+            from: selected,
+            to,
+            piece: piece.type,
+            captured: game.get(to)?.type,
+            flags: "a",
+            san: "",
+          })),
+        ...goldenExtraTargets
+          .filter((to) =>
+            !baseMoves.some((move) => move.to === to) &&
+            !extraTargets.includes(to) &&
+            !g002KnightTargets.includes(to) &&
+            !rookTargets.includes(to) &&
+            !kingTargets.includes(to) &&
+            !s006Targets.includes(to) &&
+            !sniperTargets.includes(to)
+          )
           .map((to) => ({
             color: piece.color,
             from: selected,
