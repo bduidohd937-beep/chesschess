@@ -647,14 +647,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           return current;
         }
       });
-      const currentGame = gameRef.current;
-      if (currentGame.turn() === "b") {
-        const moveObject = currentGame.moves({ square: from, verbose: true }).find((move) => move.to === to);
-        const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-        setLastMove({ from, to });
-        setCaptureSquare(captured ? to : null);
-        if (captured) onPieceCaptured?.("w");
-      }
+      const moveObject = game.moves({ square: from, verbose: true }).find((move: { to: Square; flags: string }) => move.to === to);
+      const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
+      setLastMove({ from, to });
+      setCaptureSquare(captured ? to : null);
+      if (captured) onPieceCaptured?.("w");
       if (searchId === aiSearchIdRef.current) setAiThinking(false);
     };
     worker.postMessage("uci");
