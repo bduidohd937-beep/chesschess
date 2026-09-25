@@ -390,6 +390,29 @@ function makeCustomMove(game: Chess, from: Square, to: Square, promotion?: Promo
   }
 }
 
+function makePawnExplosion(game: Chess, center: Square) {
+  const target = game.get(center);
+  if (!target || target.type !== "p") return { game, lostColors: [] as Color[] };
+
+  const next = new Chess(game.fen());
+  const lostColors: Color[] = [];
+  const file = squareFile(center);
+  const rank = squareRank(center);
+
+  for (const [df, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const fileIndex = file + df;
+    const targetRank = rank + dr;
+    if (fileIndex < 0 || fileIndex > 7 || targetRank < 1 || targetRank > 8) continue;
+    const square = `${files[fileIndex]}${targetRank}` as Square;
+    const piece = next.get(square);
+    if (!piece) continue;
+    lostColors.push(piece.color);
+    next.remove(square);
+  }
+
+  return { game: next, lostColors };
+}
+
 function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare, augmentGlowSquares }: {
   game: Chess;
   selected: Square | null;
@@ -452,7 +475,12 @@ function Board({ game, selected, legalMoves, onSquare, lastMove, captureSquare, 
         // 캡처 표시는 chess.js의 실제 이동 플래그만 사용한다.
         // captured 값만 믿으면 빈 대각선 칸이 캡처처럼 표시되는 상황을 방지할 수 없다.
         const isCapture = Boolean(
-          legalMove && (legalMove.flags.includes("c") || legalMove.flags.includes("e"))
+          legalMove &&
+          (
+            legalMove.flags.includes("c") ||
+            legalMove.flags.includes("e") ||
+            (legalMove.flags === "a" && Boolean(boardPiece))
+          )
         );
         return (
           <group key={square} position={[col - 3.5, 0, 3.5-row]}>
@@ -545,6 +573,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
   const [g001Uses, setG001Uses] = useState(2);
   const [s004Used, setS004Used] = useState(false);
+  const [s006Boost, setS006Boost] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [s005Used, setS005Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [aiEnabled, setAiEnabled] = useState(true);
   const [aiLevel, setAiLevel] = useState<AiLevel>("intermediate");
@@ -592,7 +621,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setLastMove({ from, to });
           const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
           const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-          if (captured) onPieceCaptured?.("w");
+          if (captured) onPieceCaptured?.(oppositeColor(from as Square extends never ? "w" : "b"));
           setCaptureSquare(captured ? to : null);
           return nextGame;
         } catch {
@@ -779,6 +808,40 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
 
       const s005Active = piece.type === "n" && hasAugment(augmentState, "S005") && !s005Used[piece.color];
 
+      const s006Targets: Square[] = [];
+      if (hasAugment(augmentState, "S006") && s006Boost[piece.color] && piece.type !== "n" && piece.type !== "p") {
+        const directions =
+          piece.type === "r"
+            ? [[1, 0], [-1, 0], [0, 1], [0, -1]]
+            : piece.type === "b"
+              ? [[1, 1], [1, -1], [-1, 1], [-1, -1]]
+              : [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+        for (const [df, dr] of directions) {
+          let fileIndex = fromFile + df;
+          let rank = fromRank + dr;
+          let lastEmpty: Square | null = null;
+          while (fileIndex >= 0 && fileIndex < 8 && rank >= 1 && rank <= 8) {
+            const targetSquare = `${files[fileIndex]}${rank}` as Square;
+            const target = game.get(targetSquare);
+            if (target) {
+              if (target.color !== piece.color) lastEmpty = targetSquare;
+              break;
+            }
+            lastEmpty = targetSquare;
+            fileIndex += df;
+            rank += dr;
+          }
+          if (lastEmpty) {
+            const beyondFile = fileIndex;
+            const beyondRank = rank;
+            if (beyondFile >= 0 && beyondFile < 8 && beyondRank >= 1 && beyondRank <= 8) {
+              const beyond = game.get(`${files[beyondFile]}${beyondRank}` as Square);
+              if (!beyond) s006Targets.push(lastEmpty);
+            }
+          }
+        }
+      }
+
       return [
         ...baseMoves.map((move) => s005Active ? { ...move, flags: "s" } : move),
         ...extraTargets
@@ -807,6 +870,17 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             flags: "a",
             san: "",
           })),
+        ...s006Targets
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to) && !sniperTargets.includes(to))
+          .map((to) => ({
+            color: piece.color,
+            from: selected,
+            to,
+            piece: piece.type,
+            captured: game.get(to)?.type,
+            flags: "a",
+            san: "",
+          })),
         ...sniperTargets
           .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to))
           .map((to) => ({
@@ -822,7 +896,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     } catch {
       return [];
     }
-  }, [game, selected, augmentMode, augmentState, s004Used, s005Used]);
+  }, [game, selected, augmentMode, augmentState, s004Used, s005Used, s006Boost]);
 
   const effectiveLegalMoveObjects = legalMoveObjects.filter(
     (move) => move.flags !== "g" || g001Uses > 0,
@@ -1018,9 +1092,32 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
         nextGame.move({ from: selected, to: square });
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-        setGame(nextGame);
-        if (captured) onPieceCaptured?.("w");
-        if (movingPiece?.color) setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
+        let finalGame = nextGame;
+        const capturedPiece = game.get(square);
+        if (captured) {
+          const lostColor = oppositeColor(movingPiece?.color ?? game.turn());
+          onPieceCaptured?.(lostColor);
+          if (hasAugment(augmentState, "S006")) {
+            setS006Boost((current) => ({ ...current, [lostColor]: true }));
+          }
+          if (hasAugment(augmentState, "G003") && capturedPiece?.type === "p") {
+            const explosion = makePawnExplosion(nextGame, square);
+            finalGame = explosion.game;
+            explosion.lostColors.forEach((color) => {
+              onPieceCaptured?.(color);
+              if (hasAugment(augmentState, "S006")) {
+                setS006Boost((current) => ({ ...current, [color]: true }));
+              }
+            });
+          }
+        }
+        setGame(finalGame);
+        if (movingPiece?.color) {
+          setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
+          if (hasAugment(augmentState, "S006") && s006Boost[movingPiece.color]) {
+            setS006Boost((current) => ({ ...current, [movingPiece.color]: false }));
+          }
+        }
         if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square });
         setLastMove({ from: selected, to: square });
         setCaptureSquare(captured ? square : null);
@@ -1084,6 +1181,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setPendingPromotion(null);
     setG001Uses(2);
     setS004Used(false);
+    setS006Boost({ w: false, b: false });
     setOnlineGameOver(false);
   }
 
