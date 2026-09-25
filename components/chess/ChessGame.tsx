@@ -1296,6 +1296,30 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           ? `${turn} IN CHECK`
           : `${turn} TO MOVE`;
 
+  function advanceDefenseState(movingColor: Color, from?: Square, to?: Square, capturedSquare?: Square) {
+    setG004Barrier((current) => {
+      if (!current || current.color !== movingColor) return current;
+      return current.turns <= 1 ? null : { ...current, turns: current.turns - 1 };
+    });
+
+    setT002Shields((current) => {
+      const opponent = oppositeColor(movingColor);
+      const moveShield = (list: Square[]) => {
+        let next = [...list];
+        if (capturedSquare) next = next.filter((square) => square !== capturedSquare);
+        if (from && to) next = next.map((square) => (square === from ? to : square));
+        return next;
+      };
+      return {
+        ...current,
+        [movingColor]: moveShield(current[movingColor]),
+        [opponent]: capturedSquare
+          ? current[opponent].filter((square) => square !== capturedSquare)
+          : current[opponent],
+      };
+    });
+  }
+
   function handleSquare(square: Square) {
     if (augmentSelection && !augmentSelection.selected) return;
     if (aiThinking || pendingPromotion || onlineGameOver) return;
@@ -1348,6 +1372,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             return;
           }
           setGame(customGame);
+          advanceDefenseState(movingPiece?.color ?? game.turn(), selected, selected, square);
           setG001Uses((uses) => Math.max(0, uses - 1));
           onPieceCaptured?.(oppositeColor(movingPiece?.color ?? game.turn()));
           setLastMove({ from: selected, to: selected });
@@ -1371,6 +1396,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           customFen[1] = movingPiece.color;
           const sameTurnGame = new Chess(customFen.join(" "));
           setGame(sameTurnGame);
+          advanceDefenseState(movingPiece.color, selected, square, game.get(square) ? square : undefined);
           setLastMove({ from: selected, to: square });
           setCaptureSquare(game.get(square) ? square : null);
           setT001Used((current) => ({ ...current, [movingPiece.color]: true }));
@@ -1394,6 +1420,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           customFen[1] = movingPiece.color;
           const sameTurnGame = new Chess(customFen.join(" "));
           setGame(sameTurnGame);
+          advanceDefenseState(movingPiece.color, selected, square, game.get(square) ? square : undefined);
           setLastMove({ from: selected, to: square });
           setCaptureSquare(game.get(square) ? square : null);
           setS005Used((current) => ({ ...current, [movingPiece.color]: true }));
@@ -1485,6 +1512,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           }
 
           setGame(finalCustomGame);
+          advanceDefenseState(moverColor, selected, square, captured ? square : undefined);
           setLastMove({ from: selected, to: square });
           setCaptureSquare(captured ? square : null);
           if (customAugment === "S004") setS004Used(true);
@@ -1568,6 +1596,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
 
         setGame(finalGame);
+        advanceDefenseState(moverColor, selected, square, captured ? square : undefined);
         if (movingPiece?.color) {
           setT001Used((current) => ({ ...current, [movingPiece.color]: false }));
           setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
@@ -1612,7 +1641,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         return;
       }
       setGame(promotedGame);
-      if (captured) onPieceCaptured?.("w");
+      const promotionColor = onlinePlayerColor ?? game.turn();
+      advanceDefenseState(promotionColor, pendingPromotion.from, pendingPromotion.to, captured ? pendingPromotion.to : undefined);
+      if (captured) onPieceCaptured?.(oppositeColor(promotionColor));
       if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: pendingPromotion.from, to: pendingPromotion.to, promotion: piece });
       setLastMove({ from: pendingPromotion.from, to: pendingPromotion.to });
       setCaptureSquare(captured ? pendingPromotion.to : null);
