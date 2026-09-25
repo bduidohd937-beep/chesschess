@@ -576,6 +576,15 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const [s006Boost, setS006Boost] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [s005Used, setS005Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
   const [t001Used, setT001Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
+  const [p003Golden, setP003Golden] = useState<Square[]>([]);
+  const [p004Portal, setP004Portal] = useState<{ a: Square; b: Square } | null>(null);
+  const [p006Used, setP006Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
+  const [t003Used, setT003Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
+  const [t006Used, setT006Used] = useState<{ w: boolean; b: boolean }>({ w: false, b: false });
+  const [t007Applied, setT007Applied] = useState(false);
+  const p003AppliedRef = useRef(false);
+  const t003AppliedRef = useRef(false);
+  const t006AppliedRef = useRef(false);
   const [g004Barrier, setG004Barrier] = useState<{ square: Square; color: Color; turns: number } | null>(null);
   const [t002Shields, setT002Shields] = useState<{ w: Square[]; b: Square[] }>({ w: [], b: [] });
   const g004AppliedRef = useRef(false);
@@ -593,6 +602,48 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const aiSearchIdRef = useRef(0);
   const augmentSelectionRef = useRef(augmentSelection);
   augmentSelectionRef.current = augmentSelection;
+
+  useEffect(() => {
+    if (!augmentMode || !augmentState || !hasAugment(augmentState, "P003") || p003AppliedRef.current) return;
+    p003AppliedRef.current = true;
+    const kingColor = onlinePlayerColor ?? game.turn();
+    const board = game.board();
+    let king: Square | null = null;
+    for (let row=0; row<8; row++) for (let col=0; col<8; col++) {
+      const item=board[row][col];
+      if (item?.type==="k" && item.color===kingColor) king=`${files[col]}${8-row}` as Square;
+    }
+    if (!king) return;
+    const squares: Square[]=[king];
+    const kf=squareFile(king), kr=squareRank(king);
+    for(let df=-1;df<=1;df++) for(let dr=-1;dr<=1;dr++){
+      if(!df&&!dr) continue;
+      const fi=kf+df,ri=kr+dr;
+      if(fi>=0&&fi<8&&ri>=1&&ri<=8)squares.push(`${files[fi]}${ri}` as Square);
+    }
+    setP003Golden(squares);
+  }, [augmentMode, augmentState, game, onlinePlayerColor]);
+
+  useEffect(() => {
+    if (!augmentMode || !augmentState || !hasAugment(augmentState, "T007") || t007Applied) return;
+    const color = onlinePlayerColor ?? game.turn();
+    setGame(current => {
+      const next=new Chess(current.fen());
+      const choices=["p","n","b","r","q"] as const;
+      for(const row of next.board()) for(const item of row) {
+        if(!item || item.color!==color || item.type==="k") continue;
+      }
+      for(let row=0;row<8;row++) for(let col=0;col<8;col++){
+        const sq=`${files[col]}${8-row}` as Square;
+        const item=next.get(sq);
+        if(item && item.color===color && item.type!=="k"){
+          next.remove(sq); next.put({type:choices[Math.floor(Math.random()*choices.length)],color},sq);
+        }
+      }
+      return next;
+    });
+    setT007Applied(true);
+  }, [augmentMode, augmentState, t007Applied, onlinePlayerColor]);
 
   useEffect(() => {
     if (!augmentMode || !augmentState || !hasAugment(augmentState, "P002") || p002AppliedRef.current) return;
@@ -835,6 +886,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
+      const p005Active = piece.type === "k" && hasAugment(augmentState, "P005");
+      const p006Active = hasAugment(augmentState, "P006") && !p006Used[piece.color];
+      const p004Targets: Square[] = p004Portal && game.get(selected)?.color === piece.color ? [p004Portal.a, p004Portal.b].filter((x) => x !== selected && !game.get(x)) : [];
       const s005Active = piece.type === "n" && hasAugment(augmentState, "S005") && !s005Used[piece.color];
       const t001Active = piece.type === "p" && hasAugment(augmentState, "T001") && !t001Used[piece.color];
 
@@ -1170,6 +1224,10 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             } else if (knightCount === 1 && ((absFile === 0 && absRank > 0) || (absRank === 0 && absFile > 0) || absFile === absRank)) {
               customAugment = "G002";
             }
+          } else if (hasAugment(augmentState, "P004") && p004Portal) {
+            customAugment = "P004";
+          } else if (hasAugment(augmentState, "P006")) {
+            customAugment = "P006";
           } else if (movingPiece?.type === "k" && hasAugment(augmentState, "P005")) {
             customAugment = "P005";
           } else if (movingPiece?.type === "k" && hasAugment(augmentState, "T005")) {
@@ -1194,6 +1252,15 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setLastMove({ from: selected, to: square });
           setCaptureSquare(captured ? square : null);
           if (customAugment === "S004") setS004Used(true);
+          if (customAugment === "P006" && captured) {
+            const color = movingPiece?.color ?? game.turn();
+            setP006Used((current) => ({ ...current, [color]: true }));
+          }
+          if (customAugment === "P004" && p004Portal) {
+            const portalExit = p004Portal.a === square ? p004Portal.b : p004Portal.a;
+            const portalGame = makeCustomMove(customGame, square, portalExit);
+            if (portalGame) setGame(portalGame);
+          }
 
           if (onlineSocket && onlineRoomId) {
             onlineSocket.emit(
@@ -1311,6 +1378,15 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     setS004Used(false);
     setS006Boost({ w: false, b: false });
     setT001Used({ w: false, b: false });
+    setP003Golden([]);
+    setP004Portal(null);
+    setP006Used({ w: false, b: false });
+    setT003Used({ w: false, b: false });
+    setT006Used({ w: false, b: false });
+    setT007Applied(false);
+    p003AppliedRef.current = false;
+    t003AppliedRef.current = false;
+    t006AppliedRef.current = false;
     setG004Barrier(null);
     setT002Shields({ w: [], b: [] });
     g004AppliedRef.current = false;
