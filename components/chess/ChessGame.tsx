@@ -963,7 +963,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
                   if (customAugment === "S004") setS004Used(false);
                   return;
                 }
-                if (captured) onPieceCaptured?.(movingPiece?.color ?? game.turn());
+                if (captured) onPieceCaptured?.(oppositeColor(movingPiece?.color ?? game.turn()));
               },
             );
           } else if (captured) {
