@@ -834,6 +834,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       }
 
       const s005Active = piece.type === "n" && hasAugment(augmentState, "S005") && !s005Used[piece.color];
+      const t001Active = piece.type === "p" && hasAugment(augmentState, "T001") && !t001Used[piece.color];
 
       const rookTargets: Square[] = [];
       const kingTargets: Square[] = [];
@@ -914,7 +915,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       }
 
       const filteredBaseMoves = hasAugment(augmentState, "G005") && piece.type === "r" ? [] : baseMoves;
-      const augmentedBaseMoves = filteredBaseMoves.map((move) => s005Active ? { ...move, flags: "s" } : move);
+      const augmentedBaseMoves = filteredBaseMoves.map((move) => t001Active ? { ...move, flags: "t" } : s005Active ? { ...move, flags: "s" } : move);
 
       return [
         ...augmentedBaseMoves,
@@ -1064,6 +1065,29 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setSelected(null);
           return;
         }
+        const isT001Move = Boolean(moveObject && moveObject.flags === "t");
+        if (isT001Move) {
+          if (!movingPiece || movingPiece.type !== "p" || !augmentState || !hasAugment(augmentState, "T001") || t001Used[movingPiece.color]) {
+            setSelected(null);
+            return;
+          }
+          const customGame = makeCustomMove(game, selected, square);
+          if (!customGame) {
+            setSelected(null);
+            return;
+          }
+          const customFen = customGame.fen().split(" ");
+          customFen[1] = movingPiece.color;
+          const sameTurnGame = new Chess(customFen.join(" "));
+          setGame(sameTurnGame);
+          setLastMove({ from: selected, to: square });
+          setCaptureSquare(game.get(square) ? square : null);
+          setT001Used((current) => ({ ...current, [movingPiece.color]: true }));
+          if (game.get(square)) onPieceCaptured?.(oppositeColor(movingPiece.color));
+          setSelected(null);
+          return;
+        }
+
         const isS005Move = Boolean(moveObject && moveObject.flags === "s");
         if (isS005Move) {
           if (!movingPiece || movingPiece.type !== "n" || !augmentState || !hasAugment(augmentState, "S005") || s005Used[movingPiece.color]) {
@@ -1131,6 +1155,8 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
             }
           } else if (movingPiece?.type === "k" && hasAugment(augmentState, "T005")) {
             customAugment = "T005";
+          } else if (hasAugment(augmentState, "G005")) {
+            customAugment = "G005";
           }
 
           if (!customAugment || !augmentState || !hasAugment(augmentState, customAugment)) {
@@ -1195,6 +1221,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
         setGame(finalGame);
         if (movingPiece?.color) {
+          setT001Used((current) => ({ ...current, [movingPiece.color]: false }));
           setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
           if (hasAugment(augmentState, "S006") && s006Boost[movingPiece.color]) {
             setS006Boost((current) => ({ ...current, [movingPiece.color]: false }));
