@@ -625,6 +625,58 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   }, [augmentMode, augmentState, game, onlinePlayerColor]);
 
   useEffect(() => {
+    if (!augmentMode || !augmentState || !hasAugment(augmentState, "T006") || !game.isCheckmate() || t006AppliedRef.current) return;
+    const victim = game.turn();
+    const color = onlinePlayerColor ?? victim;
+    if (victim !== color || t006Used[victim]) return;
+
+    const board = game.board();
+    let kingSquare: Square | null = null;
+    for (let row = 0; row < 8; row += 1) {
+      for (let col = 0; col < 8; col += 1) {
+        const item = board[row][col];
+        if (item?.type === "k" && item.color === victim) {
+          kingSquare = `${files[col]}${8 - row}` as Square;
+        }
+      }
+    }
+    if (!kingSquare) return;
+
+    const corners: Square[] = victim === "w" ? ["a1", "h1"] : ["a8", "h8"];
+    const kingFile = squareFile(kingSquare);
+    const target = corners.reduce((best, corner) => {
+      const bestDistance = Math.abs(squareFile(best) - kingFile);
+      const distance = Math.abs(squareFile(corner) - kingFile);
+      return distance < bestDistance ? corner : best;
+    }, corners[0]);
+
+    const rescued = new Chess(game.fen());
+    rescued.remove(kingSquare);
+    rescued.remove(target);
+    rescued.put({ type: "k", color: victim }, target);
+
+    const targetFile = squareFile(target);
+    const targetRank = squareRank(target);
+    for (let df = -1; df <= 1; df += 1) {
+      for (let dr = -1; dr <= 1; dr += 1) {
+        if (df === 0 && dr === 0) continue;
+        const file = targetFile + df;
+        const rank = targetRank + dr;
+        if (file < 0 || file > 7 || rank < 1 || rank > 8) continue;
+        const square = `${files[file]}${rank}` as Square;
+        const item = rescued.get(square);
+        if (item && item.color !== victim) rescued.remove(square);
+      }
+    }
+
+    const fen = rescued.fen().split(" ");
+    fen[1] = victim;
+    t006AppliedRef.current = true;
+    setT006Used((current) => ({ ...current, [victim]: true }));
+    setGame(new Chess(fen.join(" ")));
+  }, [augmentMode, augmentState, game, onlinePlayerColor, t006Used]);
+
+  useEffect(() => {
     if (!augmentMode || !augmentState || !hasAugment(augmentState, "T007") || t007Applied) return;
     const color = onlinePlayerColor ?? game.turn();
     const choices=["p","n","b","r","q"] as const;
@@ -1118,12 +1170,19 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
   const turn = game.turn() === "w" ? "WHITE" : "BLACK";
   const moveNumber = Math.floor(game.history().length / 2) + 1;
   const isCheck = game.isCheck() && !game.isGameOver();
+  const localColor = onlinePlayerColor ?? game.turn();
+  const opponentColor = localColor === "w" ? "b" : "w";
   const p005QueenGone = augmentMode && augmentState
-    ? (hasAugment(augmentState, "P005") && !game.board().flat().some((item) => item?.type === "q" && item.color === (onlinePlayerColor ?? "w")))
-      || (hasAugment(augmentState, "P005") && !game.board().flat().some((item) => item?.type === "q" && item.color === (onlinePlayerColor ?? "b")))
+    ? hasAugment(augmentState, "P005") &&
+      !game.board().flat().some((item) => item?.type === "q" && item.color === localColor)
+    : false;
+  const opponentP005QueenGone = augmentMode && augmentState
+    ? hasAugment(augmentState, "P005") &&
+      !game.board().flat().some((item) => item?.type === "q" && item.color === opponentColor)
     : false;
   const g006Draw = augmentMode && augmentState
-    ? hasAugment(augmentState, "G006") && !game.board().flat().some((item) => item && item.type !== "k" && item.color === (onlinePlayerColor ?? game.turn()))
+    ? hasAugment(augmentState, "G006") &&
+      !game.board().flat().some((item) => item && item.type !== "k")
     : false;
   const isGameOver = game.isGameOver() || onlineGameOver || p005QueenGone || g006Draw;
   const whitePlayerLabel = onlineSocket
@@ -1134,18 +1193,30 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
     : aiEnabled ? "STOCKFISH" : "PLAYER 2";
   const resultTitle = onlineStatus === "OPPONENT LEFT"
     ? "OPPONENT LEFT"
-    : game.isCheckmate()
-      ? `${game.turn() === "w" ? "BLACK" : "WHITE"} WINS`
-      : game.isStalemate()
-        ? "STALEMATE"
-        : "DRAW";
+    : p005QueenGone
+      ? "QUEEN LOST"
+      : opponentP005QueenGone
+        ? "OPPONENT QUEEN LOST"
+        : g006Draw
+          ? "DRAW"
+          : game.isCheckmate()
+            ? `${game.turn() === "w" ? "BLACK" : "WHITE"} WINS`
+            : game.isStalemate()
+              ? "STALEMATE"
+              : "DRAW";
   const resultSubtitle = onlineStatus === "OPPONENT LEFT"
     ? "The opponent disconnected from the match."
-    : game.isCheckmate()
-      ? "CHECKMATE"
-      : game.isStalemate()
-        ? "No legal moves remain."
-        : "The game ended without a winner.";
+    : p005QueenGone
+      ? "Your P005 condition has been triggered."
+      : opponentP005QueenGone
+        ? "The opponent's P005 condition has been triggered."
+        : g006Draw
+          ? "All non-king pieces are gone."
+          : game.isCheckmate()
+            ? "CHECKMATE"
+            : game.isStalemate()
+              ? "No legal moves remain."
+              : "The game ended without a winner.";
   const status = game.isCheckmate()
     ? `${turn === "WHITE" ? "BLACK" : "WHITE"} CHECKMATES`
     : game.isStalemate()
