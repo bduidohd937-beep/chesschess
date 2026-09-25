@@ -405,7 +405,7 @@ function makePawnExplosion(game: Chess, center: Square) {
     if (fileIndex < 0 || fileIndex > 7 || targetRank < 1 || targetRank > 8) continue;
     const square = `${files[fileIndex]}${targetRank}` as Square;
     const piece = next.get(square);
-    if (!piece) continue;
+    if (!piece || piece.type === "k") continue;
     lostColors.push(piece.color);
     next.remove(square);
   }
@@ -621,7 +621,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setLastMove({ from, to });
           const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
           const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-          if (captured) onPieceCaptured?.(oppositeColor(from as Square extends never ? "w" : "b"));
+          if (captured) onPieceCaptured?.("w");
           setCaptureSquare(captured ? to : null);
           return nextGame;
         } catch {
