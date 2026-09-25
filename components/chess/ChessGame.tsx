@@ -1034,6 +1034,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         ...kingTargets
           .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to))
           .map((to) => ({ color: piece.color, from: selected, to, piece: piece.type, captured: game.get(to)?.type, flags: "a", san: "" })),
+        ...p004Targets
+          .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !kingTargets.includes(to))
+          .map((to) => ({ color: piece.color, from: selected, to, piece: piece.type, captured: game.get(to)?.type, flags: "a", san: "" })),
         ...s006Targets
           .filter((to) => !baseMoves.some((move) => move.to === to) && !extraTargets.includes(to) && !g002KnightTargets.includes(to) && !sniperTargets.includes(to))
           .map((to) => ({
@@ -1279,7 +1282,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           if (customAugment === "P004" && p004Portal) {
             const portalExit = p004Portal.a === square ? p004Portal.b : p004Portal.a;
             const portalGame = makeCustomMove(customGame, square, portalExit);
-            if (portalGame) setGame(portalGame);
+            if (portalGame && movingPiece) {
+              const portalFen = portalGame.fen().split(" ");
+              portalFen[1] = movingPiece.color;
+              setGame(new Chess(portalFen.join(" ")));
+            }
           }
 
           if (onlineSocket && onlineRoomId) {
@@ -1345,6 +1352,9 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
           if (hasAugment(augmentState, "S006") && s006Boost[movingPiece.color]) {
             setS006Boost((current) => ({ ...current, [movingPiece.color]: false }));
+          }
+          if (hasAugment(augmentState, "P006") && p006Used[movingPiece.color]) {
+            setP006Used((current) => ({ ...current, [movingPiece.color]: false }));
           }
         }
         if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square });
