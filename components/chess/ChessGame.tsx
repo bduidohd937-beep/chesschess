@@ -108,7 +108,7 @@ function Piece({ type, color, square, selected, augmentGlow, onClick, animateFro
     >
       {augmentGlow && <pointLight color="#d7a4ff" intensity={2.2} distance={2.2} />}
       {augmentGlow && <mesh raycast={() => null} position={[0, 0.16, 0]}><torusGeometry args={[0.43, 0.045, 12, 40]} /><meshBasicMaterial color="#d98cff" transparent opacity={0.9} /></mesh>}
-      {/* 공통 Staunton 스타일 받침 */
+      {/* 공통 Staunton 스타일 받침 */}
       <mesh castShadow receiveShadow position={[0, 0.055, 0]}>
         <cylinderGeometry args={[0.41, 0.48, 0.11, 48]} />
         <meshStandardMaterial {...accent} />
@@ -592,7 +592,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
           setLastMove({ from, to });
           const moveObject = current.moves({ square: from, verbose: true }).find((move) => move.to === to);
           const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
-          if (captured) onPieceCaptured?.(oppositeColor(game.get(pendingPromotion.from)?.color ?? "w"));
+          if (captured) onPieceCaptured?.("w");
           setCaptureSquare(captured ? to : null);
           return nextGame;
         } catch {
@@ -729,6 +729,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
       if (piece.type === "p" && hasAugment(augmentState, "S003")) {
         const forward = fromRank + direction;
         const landingRank = fromRank + direction * 2;
+        const one = `${files[fromFile]}${forward}` as Square;
         const landing = `${files[fromFile]}${landingRank}` as Square;
         if (forward >= 1 && forward <= 8 && landingRank >= 1 && landingRank <= 8 && game.get(one)?.type === "p" && game.get(one)?.color === piece.color && !game.get(landing)) {
           extraTargets.push(landing);
@@ -1018,7 +1019,7 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         nextGame.move({ from: selected, to: square });
         const captured = Boolean(moveObject && (moveObject.flags.includes("c") || moveObject.flags.includes("e")));
         setGame(nextGame);
-        if (captured) onPieceCaptured?.(oppositeColor(movingPiece?.color ?? "w"));
+        if (captured) onPieceCaptured?.("w");
         if (movingPiece?.color) setS005Used((current) => ({ ...current, [movingPiece.color]: false }));
         if (onlineSocket && onlineRoomId) onlineSocket.emit("move", { roomId: onlineRoomId, from: selected, to: square });
         setLastMove({ from: selected, to: square });
