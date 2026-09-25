@@ -949,6 +949,16 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
+      if (piece.type === "k" && hasAugment(augmentState, "T005")) {
+        for (const [df, dr] of [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]]) {
+          const fi = fromFile + df;
+          const ri = fromRank + dr;
+          if (fi < 0 || fi > 7 || ri < 1 || ri > 8) continue;
+          const target = files[fi] + ri as Square;
+          if (game.get(target)?.color !== piece.color) kingTargets.push(target);
+        }
+      }
+
       const s006Targets: Square[] = [];
       if (hasAugment(augmentState, "S006") && s006Boost[piece.color] && piece.type !== "n" && piece.type !== "p") {
         const directions =
@@ -983,7 +993,11 @@ export default function ChessGame({ onBackToMenu, onlineSocket, onlineRoomId, on
         }
       }
 
-      const filteredBaseMoves = hasAugment(augmentState, "G005") && piece.type === "r" ? [] : baseMoves;
+      const filteredBaseMoves =
+        (hasAugment(augmentState, "G005") && piece.type === "r") ||
+        (hasAugment(augmentState, "P002") && piece.type === "b")
+          ? []
+          : baseMoves;
       const augmentedBaseMoves = filteredBaseMoves.map((move) => t001Active ? { ...move, flags: "t" } : s005Active ? { ...move, flags: "s" } : move);
 
       return [
